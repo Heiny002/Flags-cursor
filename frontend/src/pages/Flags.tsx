@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import FooterNav from '../components/FooterNav';
 import HotTakeCard from '../components/HotTakeCard';
 import Header from '../components/Header';
+import { Box, Button } from '@mui/material';
 
 interface HotTake {
   id: string;
@@ -23,48 +24,31 @@ const Flags: React.FC = () => {
   const [responses, setResponses] = useState<Record<string, number>>({});
   const [matchRanges, setMatchRanges] = useState<Record<string, [number, number]>>({});
   const [dealbreakers, setDealbreakers] = useState<Record<string, boolean>>({});
-
-  // Temporary mock data
-  const hotTakes: HotTake[] = [
+  const [hotTakes, setHotTakes] = useState([
     {
-      id: '1',
-      text: 'Pineapple belongs on pizza',
-      author: 'John Doe',
-      category: 'Food'
+      title: "Pineapple on pizza is delicious",
+      category: "Food Preferences"
     },
     {
-      id: '2',
-      text: 'Social media does more harm than good',
-      author: 'Jane Smith',
-      category: 'Technology'
+      title: "Dogs are better than cats",
+      category: "Pet Preferences"
     },
-    {
-      id: '3',
-      text: 'Dogs are better than cats',
-      author: 'Mike Johnson',
-      category: 'Pets'
-    }
-  ];
+    // Add more hot takes as needed
+  ]);
 
-  const handleResponseChange = (hotTakeId: string, value: number) => {
-    setResponses(prev => ({
-      ...prev,
-      [hotTakeId]: value
-    }));
+  const handleResponseChange = (value: number) => {
+    // Handle response change
+    console.log('Response changed:', value);
   };
 
-  const handleMatchChange = (hotTakeId: string, value: [number, number]) => {
-    setMatchRanges(prev => ({
-      ...prev,
-      [hotTakeId]: value
-    }));
+  const handleMatchChange = (value: [number, number]) => {
+    // Handle match change
+    console.log('Match changed:', value);
   };
 
-  const handleDealbreakerChange = (hotTakeId: string, checked: boolean) => {
-    setDealbreakers(prev => ({
-      ...prev,
-      [hotTakeId]: checked
-    }));
+  const handleDealbreakerChange = (checked: boolean) => {
+    // Handle dealbreaker change
+    console.log('Dealbreaker changed:', checked);
   };
 
   const handleNext = () => {
@@ -89,12 +73,13 @@ const Flags: React.FC = () => {
         
         <div className="space-y-6">
           <HotTakeCard
-            key={currentHotTake.id}
-            title={currentHotTake.text}
+            title={currentHotTake.title}
             category={currentHotTake.category}
-            onResponseChange={(value) => handleResponseChange(currentHotTake.id, value)}
-            onMatchChange={(value) => handleMatchChange(currentHotTake.id, value)}
-            onDealbreakerChange={(checked) => handleDealbreakerChange(currentHotTake.id, checked)}
+            onResponseChange={handleResponseChange}
+            onMatchChange={handleMatchChange}
+            onDealbreakerChange={handleDealbreakerChange}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
           />
 
           <div className="flex justify-between mt-4">

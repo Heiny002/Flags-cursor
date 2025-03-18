@@ -10,6 +10,8 @@ interface HotTakeCardProps {
   onResponseChange: (value: number) => void;
   onMatchChange: (value: [number, number]) => void;
   onDealbreakerChange: (checked: boolean) => void;
+  onNext: () => void;
+  onPrevious: () => void;
 }
 
 interface VisibilityState {
@@ -33,9 +35,10 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   onResponseChange,
   onMatchChange,
   onDealbreakerChange,
+  onNext,
+  onPrevious,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isSlidingUp, setIsSlidingUp] = useState(false);
   const [response, setResponse] = useState<number>(3);
   const [matchResponse, setMatchResponse] = useState<number>(3);
   const [isDealbreaker, setIsDealbreaker] = useState(false);
@@ -77,12 +80,20 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   };
 
   const handleNext = () => {
-    setIsSlidingUp(true);
-    // Reset states after animation
-    setTimeout(() => {
-      setIsSlidingUp(false);
+    if (isFlipped) {
       setIsFlipped(false);
-    }, 500); // Match the animation duration
+      onNext();
+    } else {
+      setIsFlipped(true);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (isFlipped) {
+      setIsFlipped(false);
+    } else {
+      onPrevious();
+    }
   };
 
   const DebugPanel = () => (
@@ -122,186 +133,172 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
           width: '100%',
           height: '350px',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Front Card */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'white',
-            height: '100%',
-            position: 'absolute',
-            width: '100%',
-            transition: 'transform 0.5s ease-in-out',
-            transform: isSlidingUp ? 'translateY(-100%)' : 'translateY(0)',
-            zIndex: 1,
-          }}
-        >
-          <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-            {visibility.frontResponse && (
-              <Typography
-                variant="h4"
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  right: 16,
-                  opacity: 0.2,
-                  fontWeight: 'bold',
-                  color: 'gray.500',
-                  pointerEvents: 'none',
-                }}
-              >
-                My Response
-              </Typography>
-            )}
-            {visibility.frontTitle && (
-              <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
-                {title}
-              </Typography>
-            )}
-            {visibility.frontCategory && (
-              <Typography
-                variant="subtitle1"
-                color="text.secondary"
-                sx={{ mb: 3 }}
-              >
-                {category}
-              </Typography>
-            )}
-            {visibility.frontSlider && (
-              <Box sx={{ mt: 2 }}>
-                <FlagSlider
-                  value={response}
-                  onChange={handleResponseChange}
-                />
-              </Box>
-            )}
-          </Box>
-        </Paper>
-
-        {/* Back Card */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'white',
-            height: '100%',
-            position: 'absolute',
-            width: '100%',
-            transition: 'transform 0.5s ease-in-out',
-            transform: isSlidingUp 
-              ? 'translateY(-100%)' 
-              : isFlipped 
-                ? 'translateX(0)' 
-                : 'translateX(100%)',
-            zIndex: 2,
-          }}
-        >
-          <Box 
-            sx={{ 
-              position: 'relative', 
-              width: '100%', 
-              height: '100%',
+        {!isFlipped ? (
+          // Front Card
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
               display: 'flex',
               flexDirection: 'column',
+              background: 'white',
+              height: '100%',
             }}
           >
-            {visibility.backResponse && (
-              <Typography
-                variant="h4"
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  right: 16,
-                  opacity: 0.2,
-                  fontWeight: 'bold',
-                  color: 'gray.500',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-              >
-                Match's Opinion
-              </Typography>
-            )}
-            <Box sx={{ position: 'relative', mb: 3 }}>
-              {visibility.backTitle && (
+            <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+              {visibility.frontResponse && (
+                <Typography
+                  variant="h4"
+                  sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    opacity: 0.2,
+                    fontWeight: 'bold',
+                    color: 'gray.500',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  My Response
+                </Typography>
+              )}
+              {visibility.frontTitle && (
                 <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
                   {title}
                 </Typography>
               )}
-              {visibility.backCategory && (
+              {visibility.frontCategory && (
                 <Typography
                   variant="subtitle1"
                   color="text.secondary"
+                  sx={{ mb: 3 }}
                 >
                   {category}
                 </Typography>
               )}
+              {visibility.frontSlider && (
+                <Box sx={{ mt: 2 }}>
+                  <FlagSlider
+                    value={response}
+                    onChange={handleResponseChange}
+                  />
+                </Box>
+              )}
             </Box>
-            {visibility.backSlider && (
-              <Box 
-                sx={{ 
-                  position: 'relative',
-                  width: '100%',
-                  mt: 'auto',
-                  mb: 3,
-                }}
-              >
-                <MatchPositionButtons
-                  selectedValue={matchResponse}
-                  onChange={handleMatchChange}
-                />
+          </Paper>
+        ) : (
+          // Back Card
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'white',
+              height: '100%',
+            }}
+          >
+            <Box 
+              sx={{ 
+                position: 'relative', 
+                width: '100%', 
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {visibility.backResponse && (
+                <Typography
+                  variant="h4"
+                  sx={{
+                    position: 'absolute',
+                    top: 16,
+                    right: 16,
+                    opacity: 0.2,
+                    fontWeight: 'bold',
+                    color: 'gray.500',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                >
+                  Match's Opinion
+                </Typography>
+              )}
+              <Box sx={{ position: 'relative', mb: 3 }}>
+                {visibility.backTitle && (
+                  <Typography variant="h5" gutterBottom sx={{ mb: 1 }}>
+                    {title}
+                  </Typography>
+                )}
+                {visibility.backCategory && (
+                  <Typography
+                    variant="subtitle1"
+                    color="text.secondary"
+                  >
+                    {category}
+                  </Typography>
+                )}
               </Box>
-            )}
-            {visibility.dealbreaker && (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'flex-end',
-                  position: 'relative',
-                  mt: 1,
-                }}
-              >
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={isDealbreaker}
-                      onChange={handleDealbreakerChange}
-                      sx={{
-                        '& .MuiSwitch-switchBase.Mui-checked': {
-                          color: '#EF4444',
-                          '&:hover': {
-                            backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              {visibility.backSlider && (
+                <Box 
+                  sx={{ 
+                    position: 'relative',
+                    width: '100%',
+                    mt: 'auto',
+                    mb: 3,
+                  }}
+                >
+                  <MatchPositionButtons
+                    selectedValue={matchResponse}
+                    onChange={handleMatchChange}
+                  />
+                </Box>
+              )}
+              {visibility.dealbreaker && (
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'flex-end',
+                    position: 'relative',
+                    mt: 1,
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={isDealbreaker}
+                        onChange={handleDealbreakerChange}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#EF4444',
+                            '&:hover': {
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                            },
                           },
-                        },
-                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                          backgroundColor: '#EF4444',
-                        },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography
-                      sx={{
-                        color: isDealbreaker ? '#EF4444' : 'text.primary',
-                        fontWeight: isDealbreaker ? 'bold' : 'normal',
-                        transition: 'all 0.2s ease-in-out',
-                      }}
-                    >
-                      Dealbreaker
-                    </Typography>
-                  }
-                />
-              </Box>
-            )}
-          </Box>
-        </Paper>
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#EF4444',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography
+                        sx={{
+                          color: isDealbreaker ? '#EF4444' : 'text.primary',
+                          fontWeight: isDealbreaker ? 'bold' : 'normal',
+                        }}
+                      >
+                        Dealbreaker
+                      </Typography>
+                    }
+                  />
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        )}
       </Box>
       
       {visibility.flipButton && (
@@ -320,20 +317,6 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
           >
             Flip
           </Button>
-          {isFlipped && (
-            <Button
-              variant="contained"
-              onClick={handleNext}
-              sx={{
-                backgroundColor: '#EF4444',
-                '&:hover': {
-                  backgroundColor: '#DC2626',
-                },
-              }}
-            >
-              Next
-            </Button>
-          )}
         </Box>
       )}
     </Box>
