@@ -136,4 +136,60 @@ router.get('/responses', auth, async (req, res) => {
   }
 });
 
+// Handle initial questionnaire submission
+router.post('/initial-questionnaire', auth, async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const { name, sex, location, interestedIn, hotTake, importantCategories } = req.body;
+
+    // Validate required fields
+    if (!name || !sex || !location || !interestedIn || !importantCategories) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        name,
+        sex,
+        location,
+        interestedIn,
+        hotTake,
+        importantCategories,
+        hasCompletedInitialQuestionnaire: true
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: 'Questionnaire completed successfully',
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        hasCompletedInitialQuestionnaire: updatedUser.hasCompletedInitialQuestionnaire
+      }
+    });
+  } catch (error) {
+    console.error('Error saving questionnaire:', error);
+    res.status(500).json({ message: 'Error saving questionnaire data' });
+  }
+});
+
+// Get user's questionnaire completion status
+router.get('/questionnaire-status', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('hasCompletedInitialQuestionnaire');
+    res.json({ hasCompleted: user?.hasCompletedInitialQuestionnaire || false });
+  } catch (error) {
+    res.status(400).json({ error: 'Error fetching questionnaire status' });
+  }
+});
+
 export default router; 

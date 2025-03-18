@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import questionRoutes from './routes/questions';
 import profileRoutes from './routes/profiles';
+import { initWhitelistedUser } from './utils/initWhitelistedUser';
 
 dotenv.config();
 
@@ -23,7 +24,11 @@ app.use('/api/profiles', profileRoutes);
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/dating-app';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
+  .then(async () => {
+    console.log('Connected to MongoDB');
+    // Initialize whitelisted user after successful database connection
+    await initWhitelistedUser();
+  })
   .catch((error) => console.error('MongoDB connection error:', error));
 
 // Start server

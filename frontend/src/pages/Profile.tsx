@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import FooterNav from '../components/FooterNav';
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const Profile: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
-    age: user?.profile?.age || '',
+    age: user?.profile?.age || 0,
     gender: user?.profile?.gender || '',
     bio: user?.profile?.bio || '',
     location: user?.profile?.location || '',
@@ -38,7 +39,8 @@ const Profile: React.FC = () => {
     try {
       await updateProfile(profile);
       setIsEditing(false);
-    } catch (err) {
+    } catch (error) {
+      console.error('Profile update error:', error);
       setError('Failed to update profile');
     } finally {
       setLoading(false);
@@ -68,20 +70,24 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ mt: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography component="h1" variant="h5">
+    <div className="page-container">
+      <Container maxWidth="sm" className="py-6">
+        <Paper elevation={3} className="card">
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5" component="h1" className="heading-1">
               Profile
             </Typography>
-            <IconButton onClick={() => setIsEditing(!isEditing)} color="primary">
+            <IconButton 
+              onClick={() => setIsEditing(!isEditing)} 
+              color="primary"
+              className="hover:bg-gray-100 rounded-full transition-colors duration-200"
+            >
               {isEditing ? <SaveIcon /> : <EditIcon />}
             </IconButton>
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2 }} className="rounded-md">
               {error}
             </Alert>
           )}
@@ -89,40 +95,43 @@ const Profile: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Name
-                </Typography>
-                <Typography>{user.name}</Typography>
+                <TextField
+                  fullWidth
+                  label="Name"
+                  value={user?.name || ''}
+                  disabled
+                  className="input"
+                />
               </Grid>
-
               <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Email
-                </Typography>
-                <Typography>{user.email}</Typography>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  value={user?.email || ''}
+                  disabled
+                  className="input"
+                />
               </Grid>
-
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Age"
-                  type="number"
                   value={profile.age}
-                  onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                  onChange={(e) => setProfile({ ...profile, age: Number(e.target.value) })}
                   disabled={!isEditing}
+                  className="input"
                 />
               </Grid>
-
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Gender"
                   value={profile.gender}
                   onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
                   disabled={!isEditing}
+                  className="input"
                 />
               </Grid>
-
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -130,9 +139,9 @@ const Profile: React.FC = () => {
                   value={profile.location}
                   onChange={(e) => setProfile({ ...profile, location: e.target.value })}
                   disabled={!isEditing}
+                  className="input"
                 />
               </Grid>
-
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -142,57 +151,60 @@ const Profile: React.FC = () => {
                   value={profile.bio}
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                   disabled={!isEditing}
+                  className="input"
                 />
               </Grid>
-
               <Grid item xs={12}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Interests
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <Box display="flex" gap={2}>
                   <TextField
-                    size="small"
+                    fullWidth
                     label="Add Interest"
                     value={newInterest}
                     onChange={(e) => setNewInterest(e.target.value)}
                     disabled={!isEditing}
+                    className="input"
                   />
                   <Button
                     variant="contained"
                     onClick={handleAddInterest}
                     disabled={!isEditing || !newInterest}
+                    className="btn btn-primary"
                   >
                     Add
                   </Button>
                 </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              </Grid>
+              <Grid item xs={12}>
+                <Box display="flex" flexWrap="wrap" gap={1}>
                   {profile.interests.map((interest) => (
                     <Chip
                       key={interest}
                       label={interest}
                       onDelete={isEditing ? () => handleRemoveInterest(interest) : undefined}
+                      className="badge badge-secondary"
                     />
                   ))}
                 </Box>
               </Grid>
-
               {isEditing && (
                 <Grid item xs={12}>
                   <Button
-                    type="submit"
-                    variant="contained"
                     fullWidth
+                    variant="contained"
+                    type="submit"
                     disabled={loading}
+                    className="btn btn-primary"
                   >
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    Save Changes
                   </Button>
                 </Grid>
               )}
             </Grid>
           </form>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+      <FooterNav />
+    </div>
   );
 };
 

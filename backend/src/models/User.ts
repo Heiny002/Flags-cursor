@@ -1,22 +1,23 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+interface ILocation {
+  city: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface IUser extends mongoose.Document {
   email: string;
   password: string;
   name: string;
-  profile: {
-    age: number;
-    gender: string;
-    bio: string;
-    location: string;
-    interests: string[];
-  };
-  questionnaireResponses: {
-    questionId: mongoose.Types.ObjectId;
-    answer: string | number | boolean;
-    timestamp: Date;
-  }[];
+  sex?: string;
+  location?: ILocation;
+  interestedIn?: string;
+  hotTake?: string;
+  importantCategories?: string[];
+  hasCompletedInitialQuestionnaire: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -35,50 +36,57 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
   },
-  profile: {
-    age: Number,
-    gender: String,
-    bio: String,
-    location: String,
-    interests: [String],
+  sex: {
+    type: String,
+    enum: ['male', 'female', 'prefer_not_to_say'],
   },
-  questionnaireResponses: [{
-    questionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Question',
-    },
-    answer: mongoose.Schema.Types.Mixed,
-    timestamp: {
-      type: Date,
-      default: Date.now,
-    },
+  location: {
+    city: String,
+    country: String,
+    latitude: Number,
+    longitude: Number,
+  },
+  interestedIn: {
+    type: String,
+    enum: ['male', 'female', 'both', 'prefer_not_to_say'],
+  },
+  hotTake: {
+    type: String,
+    maxLength: 80,
+  },
+  importantCategories: [{
+    type: String,
+    enum: [
+      'Lifestyle & Habits',
+      'Culture & Entertainment',
+      'Ethical & Moral Beliefs',
+      'Social & Political Views',
+      'Relationship Dynamics',
+      'Career & Education',
+      'Travel & Adventure',
+      'Food & Cuisine',
+    ],
   }],
+  hasCompletedInitialQuestionnaire: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   timestamps: true,
 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error: any) {
-    next(error);
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 8);
   }
+  next();
 });
 
-// Method to compare password
+// Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw error;
-  }
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 export default mongoose.model<IUser>('User', userSchema); 
