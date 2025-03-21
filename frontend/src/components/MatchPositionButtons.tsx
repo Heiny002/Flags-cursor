@@ -1,117 +1,148 @@
-import React from 'react';
-import { Box, Button, Typography } from '@mui/material';
-import { FaFlag } from 'react-icons/fa';
-
-interface Position {
-  value: number;
-  label: string;
-  color: string;
-  iconColor: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
 
 interface MatchPositionButtonsProps {
-  selectedValue: number;
-  onChange: (value: number) => void;
+  selectedValue: number | null;
+  onChange: (value: [number, number]) => void;
 }
-
-const positions: Position[] = [
-  { value: 1, label: 'Strongly Disagree', color: '#EF4444', iconColor: '#991B1B' },
-  { value: 2, label: 'Disagree', color: '#F97316', iconColor: '#9A3412' },
-  { value: 3, label: 'Neutral', color: '#D4C988', iconColor: '#8B7355' },
-  { value: 4, label: 'Agree', color: '#EAB308', iconColor: '#854D0E' },
-  { value: 5, label: 'Strongly Agree', color: '#22C55E', iconColor: '#166534' },
-];
 
 const MatchPositionButtons: React.FC<MatchPositionButtonsProps> = ({
   selectedValue,
   onChange,
 }) => {
+  const [selectedRange, setSelectedRange] = useState<[number, number] | null>(null);
+  const [isSelectingRange, setIsSelectingRange] = useState(false);
+
+  useEffect(() => {
+    if (selectedValue === null) {
+      setSelectedRange(null);
+      setIsSelectingRange(false);
+    }
+  }, [selectedValue]);
+
+  const handlePositionClick = (value: number) => {
+    if (!isSelectingRange) {
+      setSelectedRange([value, value]);
+      setIsSelectingRange(true);
+    } else {
+      setSelectedRange([selectedRange![0], value]);
+      onChange([selectedRange![0], value]);
+      setIsSelectingRange(false);
+    }
+  };
+
+  const isValueInRange = (value: number) => {
+    if (!selectedRange) return false;
+    const [start, end] = selectedRange;
+    return value >= Math.min(start, end) && value <= Math.max(start, end);
+  };
+
+  const getColor = (value: number) => {
+    switch (value) {
+      case 1:
+        return '#EF4444'; // red
+      case 2:
+        return '#F97316'; // orange
+      case 3:
+        return '#64748B'; // slate
+      case 4:
+        return '#10B981'; // emerald
+      case 5:
+        return '#3B82F6'; // blue
+      default:
+        return '#64748B'; // slate
+    }
+  };
+
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 2,
-        width: '100%',
-        position: 'relative',
-        zIndex: 1,
-      }}
-    >
-      {positions.map((position) => (
-        <Box
-          key={position.value}
-          onClick={() => onChange(position.value)}
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            position: 'relative',
-            cursor: 'pointer',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: selectedValue === position.value ? position.color : 'transparent',
-              border: `2px solid ${position.color}`,
-              borderRadius: '8px',
-              transition: 'all 0.2s ease-in-out',
-              zIndex: -1,
-            },
-            '&:hover::before': {
-              backgroundColor: selectedValue === position.value 
-                ? position.color 
-                : `${position.color}20`,
-              transform: 'scale(1.05)',
-            },
-            '&:active::before': {
-              transform: 'scale(0.95)',
-            },
-          }}
-        >
-          <Box
-            sx={{
+    <Box sx={{ width: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1,
+          gap: 2,
+        }}
+      >
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            onClick={() => handlePositionClick(value)}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '8px',
-              position: 'relative',
-              zIndex: 1,
+              transition: 'transform 0.2s ease-in-out',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
             }}
           >
-            <FaFlag
-              size={20}
-              color={selectedValue === position.value ? position.iconColor : position.color}
-            />
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isValueInRange(value) ? getColor(value) : '#E5E7EB',
+                transition: 'all 0.2s ease-in-out',
+                mb: 1,
+                border: isValueInRange(value) ? '2px solid transparent' : '2px solid #D1D5DB',
+                '&:hover': {
+                  borderColor: getColor(value),
+                  backgroundColor: isValueInRange(value) ? getColor(value) : '#F3F4F6',
+                },
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  color: isValueInRange(value) ? 'white' : '#6B7280',
+                  fontWeight: isValueInRange(value) ? 'bold' : 'normal',
+                }}
+              >
+                {value}
+              </Typography>
+            </Box>
             <Typography
               variant="caption"
               sx={{
-                mt: 1,
-                color: selectedValue === position.value ? position.iconColor : position.color,
-                fontWeight: selectedValue === position.value ? 'bold' : 'normal',
-                fontSize: '0.7rem',
                 textAlign: 'center',
-                lineHeight: 1.1,
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'normal',
-                wordWrap: 'break-word',
-                height: '2.4em',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
+                color: isValueInRange(value) ? 'text.primary' : 'text.secondary',
+                fontWeight: isValueInRange(value) ? 'bold' : 'normal',
+                transition: 'all 0.2s ease-in-out',
                 userSelect: 'none',
-                pointerEvents: 'none',
               }}
             >
-              {position.label}
+              {value === 1 ? 'Strongly Disagree' :
+               value === 2 ? 'Disagree' :
+               value === 3 ? 'Neutral' :
+               value === 4 ? 'Agree' :
+               'Strongly Agree'}
             </Typography>
-          </Box>
-        </Box>
-      ))}
+          </button>
+        ))}
+      </Box>
+      {isSelectingRange && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ textAlign: 'center', display: 'block', mt: 1 }}
+        >
+          Select the end of your range
+        </Typography>
+      )}
     </Box>
   );
 };

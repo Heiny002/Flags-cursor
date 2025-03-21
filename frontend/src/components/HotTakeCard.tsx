@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, Button, Switch, FormControlLabel, Checkbox } from '@mui/material';
-import FlagSlider from './FlagSlider';
-import MatchPositionButtons from './MatchPositionButtons';
+import { Box, Typography, Paper, Button, Switch, FormControlLabel } from '@mui/material';
+import PositionButtons from './PositionButtons';
 import { FaExchangeAlt } from 'react-icons/fa';
 
 interface HotTakeCardProps {
   title: string;
   category: string;
-  onResponseChange: (value: number) => void;
-  onMatchChange: (value: [number, number]) => void;
+  onResponseChange: (value: number | null) => void;
+  onMatchChange: (value: [number, number] | null) => void;
   onDealbreakerChange: (checked: boolean) => void;
   onNext: () => void;
   onPrevious: () => void;
+  onSkip: () => void;
+  cardKey: string;
 }
 
 interface VisibilityState {
@@ -37,11 +38,14 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   onDealbreakerChange,
   onNext,
   onPrevious,
+  onSkip,
+  cardKey,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [response, setResponse] = useState<number>(3);
-  const [matchResponse, setMatchResponse] = useState<number>(3);
+  const [response, setResponse] = useState<number | null>(null);
+  const [matchResponse, setMatchResponse] = useState<[number, number] | null>(null);
   const [isDealbreaker, setIsDealbreaker] = useState(false);
+  const [isSelectingRange, setIsSelectingRange] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityState>({
     frontCard: true,
     backCard: true,
@@ -57,14 +61,46 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
     flipButton: true,
   });
 
-  const handleResponseChange = (value: number) => {
+  // Reset state when cardKey changes
+  React.useEffect(() => {
+    setIsFlipped(false);
+    setResponse(null);
+    setMatchResponse(null);
+    setIsDealbreaker(false);
+    setIsSelectingRange(false);
+  }, [cardKey]);
+
+  const handleResponseChange = (value: number | null) => {
     setResponse(value);
     onResponseChange(value);
   };
 
-  const handleMatchChange = (value: number) => {
+  const handleMatchChange = (value: [number, number] | null) => {
     setMatchResponse(value);
-    onMatchChange([value, value]);
+    onMatchChange(value);
+    setIsSelectingRange(false);
+  };
+
+  const handleMatchClick = (value: number) => {
+    if (!isSelectingRange) {
+      // Single selection
+      setMatchResponse([value, value]);
+      onMatchChange([value, value]);
+      setIsSelectingRange(false);
+    } else {
+      // Range selection
+      setMatchResponse([matchResponse![0], value]);
+      onMatchChange([matchResponse![0], value]);
+      setIsSelectingRange(false);
+    }
+  };
+
+  const handleReset = () => {
+    setResponse(null);
+    setMatchResponse(null);
+    setIsSelectingRange(false);
+    onResponseChange(null);
+    onMatchChange(null);
   };
 
   const handleDealbreakerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,38 +132,13 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
     }
   };
 
-  const DebugPanel = () => (
-    <Box sx={{ 
-      mb: 2, 
-      p: 2, 
-      border: '1px solid #ccc', 
-      borderRadius: 1,
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: 1,
-    }}>
-      <Typography variant="h6" sx={{ gridColumn: '1 / -1', mb: 1 }}>
-        Debug Controls - Toggle Visibility
-      </Typography>
-      {Object.entries(visibility).map(([key, value]) => (
-        <FormControlLabel
-          key={key}
-          control={
-            <Checkbox
-              checked={value}
-              onChange={() => toggleVisibility(key as keyof VisibilityState)}
-              size="small"
-            />
-          }
-          label={key}
-        />
-      ))}
-    </Box>
-  );
+  const isFrontComplete = response !== null;
+  const isBackComplete = matchResponse !== null;
+  const canFlip = isFrontComplete;
+  const canProceed = isFrontComplete && isBackComplete;
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <DebugPanel />
+    <Box sx={{ width: '100%' }} key={cardKey}>
       <Box
         sx={{
           width: '100%',
@@ -180,7 +191,7 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
               )}
               {visibility.frontSlider && (
                 <Box sx={{ mt: 2 }}>
-                  <FlagSlider
+                  <PositionButtons
                     value={response}
                     onChange={handleResponseChange}
                   />
@@ -250,9 +261,13 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
                     mb: 3,
                   }}
                 >
-                  <MatchPositionButtons
-                    selectedValue={matchResponse}
-                    onChange={handleMatchChange}
+                  <PositionButtons
+                    value={matchResponse?.[0] || null}
+                    onChange={handleMatchClick}
+                    isRange={true}
+                    onRangeChange={handleMatchChange}
+                    isSelectingRange={isSelectingRange}
+                    rangeValue={matchResponse}
                   />
                 </Box>
               )}
@@ -301,24 +316,38 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
         )}
       </Box>
       
-      {visibility.flipButton && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+        <Button
+          variant="text"
+          onClick={onSkip}
+          sx={{
+            color: 'gray.600',
+            '&:hover': {
+              backgroundColor: 'transparent',
+              color: 'gray.900',
+            },
+          }}
+        >
+          Skip
+        </Button>
+        {visibility.flipButton && (
           <Button
             variant="text"
             onClick={() => setIsFlipped(!isFlipped)}
             startIcon={<FaExchangeAlt />}
+            disabled={!canFlip}
             sx={{
-              color: 'gray.600',
+              color: canFlip ? 'gray.600' : 'gray.400',
               '&:hover': {
                 backgroundColor: 'transparent',
-                color: 'gray.900',
+                color: canFlip ? 'gray.900' : 'gray.400',
               },
             }}
           >
             Flip
           </Button>
-        </Box>
-      )}
+        )}
+      </Box>
     </Box>
   );
 };

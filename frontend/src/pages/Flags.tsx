@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import FooterNav from '../components/FooterNav';
 import HotTakeCard from '../components/HotTakeCard';
 import Header from '../components/Header';
-import { Box, Button } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 
 interface HotTake {
   id: string;
@@ -21,8 +21,8 @@ const agreementLevels = [
 
 const Flags: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<string, number>>({});
-  const [matchRanges, setMatchRanges] = useState<Record<string, [number, number]>>({});
+  const [responses, setResponses] = useState<Record<string, number | null>>({});
+  const [matchRanges, setMatchRanges] = useState<Record<string, [number, number] | null>>({});
   const [dealbreakers, setDealbreakers] = useState<Record<string, boolean>>({});
   const [hotTakes, setHotTakes] = useState([
     {
@@ -36,19 +36,25 @@ const Flags: React.FC = () => {
     // Add more hot takes as needed
   ]);
 
-  const handleResponseChange = (value: number) => {
-    // Handle response change
-    console.log('Response changed:', value);
+  const handleResponseChange = (value: number | null) => {
+    setResponses(prev => ({
+      ...prev,
+      [currentHotTake.title]: value
+    }));
   };
 
-  const handleMatchChange = (value: [number, number]) => {
-    // Handle match change
-    console.log('Match changed:', value);
+  const handleMatchChange = (value: [number, number] | null) => {
+    setMatchRanges(prev => ({
+      ...prev,
+      [currentHotTake.title]: value
+    }));
   };
 
   const handleDealbreakerChange = (checked: boolean) => {
-    // Handle dealbreaker change
-    console.log('Dealbreaker changed:', checked);
+    setDealbreakers(prev => ({
+      ...prev,
+      [currentHotTake.title]: checked
+    }));
   };
 
   const handleNext = () => {
@@ -63,52 +69,50 @@ const Flags: React.FC = () => {
     }
   };
 
+  const handleSkip = () => {
+    // Move to next hot take without saving any responses
+    setCurrentIndex(prev => prev + 1);
+  };
+
   const currentHotTake = hotTakes[currentIndex];
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
       <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Hot Takes</h1>
-        
-        <div className="space-y-6">
-          <HotTakeCard
-            title={currentHotTake.title}
-            category={currentHotTake.category}
-            onResponseChange={handleResponseChange}
-            onMatchChange={handleMatchChange}
-            onDealbreakerChange={handleDealbreakerChange}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-          />
-
-          <div className="flex justify-between mt-4">
-            <button
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-              className={`px-4 py-2 rounded-md font-medium transition-all duration-200
-                ${currentIndex === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-                }
-              `}
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === hotTakes.length - 1}
-              className={`px-4 py-2 rounded-md font-medium transition-all duration-200
-                ${currentIndex === hotTakes.length - 1
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-                }
-              `}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <Typography variant="h4" gutterBottom>
+          Hot Takes
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+          Share your opinions on these statements and see how they match with potential partners.
+        </Typography>
+        <HotTakeCard
+          title={currentHotTake.title}
+          category={currentHotTake.category}
+          onResponseChange={handleResponseChange}
+          onMatchChange={handleMatchChange}
+          onDealbreakerChange={handleDealbreakerChange}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+          onSkip={handleSkip}
+          cardKey={`hot-take-${currentIndex}`}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={currentIndex === hotTakes.length - 1}
+          >
+            Next
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+          >
+            Previous
+          </Button>
+        </Box>
       </div>
       
       <FooterNav />

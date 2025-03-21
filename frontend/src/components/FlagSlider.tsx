@@ -1,174 +1,88 @@
 import React from 'react';
-import { Box, Typography, Checkbox, FormControlLabel } from '@mui/material';
-import { FaFlag } from 'react-icons/fa';
-
-interface Position {
-  value: number;
-  label: string;
-  color: string;
-  iconColor: string;
-}
+import { Box, Typography, Slider, Stack } from '@mui/material';
 
 interface FlagSliderProps {
-  value: number | [number, number];
+  value: number | null;
   onChange: (value: number) => void;
-  isMatch?: boolean;
-  onMatchChange?: (value: [number, number]) => void;
-  showDealbreaker?: boolean;
-  onDealbreakerChange?: (checked: boolean) => void;
-  isDealbreaker?: boolean;
 }
 
-const positions: Position[] = [
-  { value: 1, label: 'Strongly Disagree', color: '#EF4444', iconColor: '#991B1B' },
-  { value: 2, label: 'Disagree', color: '#F97316', iconColor: '#9A3412' },
-  { value: 3, label: 'Neutral', color: '#D4C988', iconColor: '#8B7355' },
-  { value: 4, label: 'Agree', color: '#EAB308', iconColor: '#854D0E' },
-  { value: 5, label: 'Strongly Agree', color: '#22C55E', iconColor: '#166534' },
-];
+const FlagSlider: React.FC<FlagSliderProps> = ({ value, onChange }) => {
+  const marks = [
+    { value: 1, label: 'Strongly Disagree' },
+    { value: 2, label: 'Disagree' },
+    { value: 3, label: 'Neutral' },
+    { value: 4, label: 'Agree' },
+    { value: 5, label: 'Strongly Agree' },
+  ];
 
-const FlagSlider: React.FC<FlagSliderProps> = ({
-  value,
-  onChange,
-  isMatch = false,
-  onMatchChange,
-  showDealbreaker = false,
-  onDealbreakerChange,
-  isDealbreaker = false,
-}) => {
-  const isValueInRange = (position: number) => {
-    if (Array.isArray(value)) {
-      const [start, end] = value;
-      return position >= Math.min(start, end) && position <= Math.max(start, end);
-    }
-    return position === value;
-  };
-
-  const handleClick = (clickedValue: number) => {
-    if (isMatch && onMatchChange) {
-      if (Array.isArray(value)) {
-        const [start, end] = value;
-        if (start === end) {
-          onMatchChange([start, clickedValue]);
-        } else if (clickedValue === start || clickedValue === end) {
-          onMatchChange([clickedValue, clickedValue]);
-        } else {
-          onMatchChange([start, clickedValue]);
-        }
-      }
-    }
-    onChange(clickedValue);
-  };
-
-  const handleDealbreakerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (onDealbreakerChange) {
-      onDealbreakerChange(event.target.checked);
+  const getColor = (value: number) => {
+    switch (value) {
+      case 1:
+        return '#EF4444'; // red
+      case 2:
+        return '#F97316'; // orange
+      case 3:
+        return '#64748B'; // slate
+      case 4:
+        return '#10B981'; // emerald
+      case 5:
+        return '#3B82F6'; // blue
+      default:
+        return '#64748B'; // slate
     }
   };
 
   return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      <Box
+    <Box sx={{ width: '100%', px: 2 }}>
+      <Slider
+        value={value || 0}
+        onChange={(_, newValue) => onChange(newValue as number)}
+        min={1}
+        max={5}
+        step={1}
+        marks={marks}
+        valueLabelDisplay="auto"
+        valueLabelFormat={(value) => marks.find(mark => mark.value === value)?.label}
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-          gap: 2,
+          '& .MuiSlider-thumb': {
+            backgroundColor: value ? getColor(value) : '#94A3B8',
+            '&:hover, &.Mui-focusVisible': {
+              boxShadow: 'none',
+            },
+            '&.Mui-active': {
+              boxShadow: 'none',
+            },
+          },
+          '& .MuiSlider-track': {
+            backgroundColor: value ? getColor(value) : '#E2E8F0',
+          },
+          '& .MuiSlider-rail': {
+            backgroundColor: '#E2E8F0',
+          },
+          '& .MuiSlider-mark': {
+            backgroundColor: value ? getColor(value) : '#94A3B8',
+            '&.MuiSlider-markActive': {
+              backgroundColor: value ? getColor(value) : '#94A3B8',
+            },
+          },
+          '& .MuiSlider-valueLabel': {
+            backgroundColor: value ? getColor(value) : '#94A3B8',
+            color: 'white',
+            '&:before': {
+              display: 'none',
+            },
+            '& *': {
+              background: 'transparent',
+              color: 'white',
+            },
+          },
         }}
-      >
-        {positions.map((position) => (
-          <button
-            key={position.value}
-            onClick={() => handleClick(position.value)}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              transition: 'transform 0.2s ease-in-out',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-            }}
-          >
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isValueInRange(position.value) ? position.color : '#E5E7EB',
-                transition: 'all 0.2s ease-in-out',
-                mb: 1,
-                border: isValueInRange(position.value) ? '2px solid transparent' : '2px solid #D1D5DB',
-                '&:hover': {
-                  borderColor: position.color,
-                  backgroundColor: isValueInRange(position.value) ? position.color : '#F3F4F6',
-                },
-              }}
-            >
-              <FaFlag
-                size={20}
-                color={isValueInRange(position.value) ? position.iconColor : '#6B7280'}
-              />
-            </Box>
-            <Typography
-              variant="caption"
-              sx={{
-                textAlign: 'center',
-                color: isValueInRange(position.value) ? 'text.primary' : 'text.secondary',
-                fontWeight: isValueInRange(position.value) ? 'bold' : 'normal',
-                transition: 'all 0.2s ease-in-out',
-                userSelect: 'none',
-              }}
-            >
-              {position.label}
-            </Typography>
-          </button>
-        ))}
-      </Box>
-      {showDealbreaker && (
-        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={isDealbreaker}
-                onChange={handleDealbreakerChange}
-                sx={{
-                  '&.Mui-checked': {
-                    color: '#EF4444',
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.04)',
-                  },
-                }}
-              />
-            }
-            label={
-              <Typography
-                sx={{
-                  color: isDealbreaker ? '#EF4444' : 'text.primary',
-                  fontWeight: isDealbreaker ? 'bold' : 'normal',
-                  transition: 'all 0.2s ease-in-out',
-                  userSelect: 'none',
-                }}
-              >
-                Dealbreaker
-              </Typography>
-            }
-          />
-        </Box>
-      )}
+      />
+      <Stack direction="row" justifyContent="space-between" sx={{ mt: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          {value ? marks.find(mark => mark.value === value)?.label : 'Select your response'}
+        </Typography>
+      </Stack>
     </Box>
   );
 };
