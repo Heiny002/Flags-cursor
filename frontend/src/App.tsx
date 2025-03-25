@@ -6,6 +6,7 @@ import Profile from './pages/Profile';
 import Flags from './pages/Flags';
 import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
+import HotTakeSubmission from './pages/HotTakeSubmission';
 import { useState } from 'react';
 import './styles/design-system.css';
 
@@ -65,6 +66,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hot-takes"
+            element={
+              <ProtectedRoute>
+                <HotTakeSubmission />
               </ProtectedRoute>
             }
           />

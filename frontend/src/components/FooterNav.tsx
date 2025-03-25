@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaUser, FaFlag, FaComments, FaCog } from 'react-icons/fa';
+import { FaUser, FaFlag, FaComments, FaCog, FaPlus } from 'react-icons/fa';
 
 const FooterNav: React.FC = () => {
   const location = useLocation();
@@ -26,6 +26,14 @@ const FooterNav: React.FC = () => {
         >
           <FaFlag className="text-xl" />
           <span className="text-xs mt-1">Flags</span>
+        </Link>
+
+        <Link 
+          to="/hot-takes" 
+          className={`footer-nav-item ${isActive('/hot-takes') ? 'active' : ''}`}
+        >
+          <FaPlus className="text-xl" />
+          <span className="text-xs mt-1">HotTakes</span>
         </Link>
         
         <Link 
