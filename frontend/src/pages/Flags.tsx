@@ -49,11 +49,18 @@ const Flags: React.FC = () => {
         // Validate the response data
         const validHotTakes = response.data.filter((hotTake: any) => 
           hotTake && 
+          hotTake._id && // Ensure we have a valid MongoDB ID
           hotTake.text && 
           hotTake.categories && 
           hotTake.author && 
           hotTake.author.name
-        );
+        ).map((hotTake: any) => ({
+          id: hotTake._id, // Map _id to id for frontend use
+          text: hotTake.text,
+          categories: hotTake.categories,
+          author: hotTake.author,
+          createdAt: hotTake.createdAt
+        }));
 
         if (validHotTakes.length === 0) {
           throw new Error('No valid hot takes available');
@@ -74,32 +81,66 @@ const Flags: React.FC = () => {
   }, [token]);
 
   const handleResponseChange = (value: number | null) => {
-    if (!currentHotTake?.text) return;
+    if (!currentHotTake?.id) return;
     setResponses(prev => ({
       ...prev,
-      [currentHotTake.text]: value
+      [currentHotTake.id]: value
     }));
   };
 
   const handleMatchChange = (value: [number, number] | null) => {
-    if (!currentHotTake?.text) return;
+    if (!currentHotTake?.id) return;
     setMatchRanges(prev => ({
       ...prev,
-      [currentHotTake.text]: value
+      [currentHotTake.id]: value
     }));
   };
 
   const handleDealbreakerChange = (checked: boolean) => {
-    if (!currentHotTake?.text) return;
+    if (!currentHotTake?.id) return;
     setDealbreakers(prev => ({
       ...prev,
-      [currentHotTake.text]: checked
+      [currentHotTake.id]: checked
     }));
   };
 
   const handleNext = () => {
     if (currentIndex < hotTakes.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      console.log('Moving to next card. Current index:', currentIndex);
+      console.log('Current hot take:', hotTakes[currentIndex]);
+      
+      // Store the current hot take ID
+      const currentHotTakeId = hotTakes[currentIndex].id;
+      console.log('Current hot take ID:', currentHotTakeId);
+      
+      // First increment the index
+      setCurrentIndex(prev => {
+        const newIndex = prev + 1;
+        console.log('New index:', newIndex);
+        return newIndex;
+      });
+
+      // Then clean up the state for the previous card
+      setResponses(prev => {
+        const newResponses = { ...prev };
+        delete newResponses[currentHotTakeId];
+        console.log('Updated responses:', newResponses);
+        return newResponses;
+      });
+      
+      setMatchRanges(prev => {
+        const newRanges = { ...prev };
+        delete newRanges[currentHotTakeId];
+        console.log('Updated match ranges:', newRanges);
+        return newRanges;
+      });
+      
+      setDealbreakers(prev => {
+        const newDealbreakers = { ...prev };
+        delete newDealbreakers[currentHotTakeId];
+        console.log('Updated dealbreakers:', newDealbreakers);
+        return newDealbreakers;
+      });
     }
   };
 
@@ -191,7 +232,7 @@ const Flags: React.FC = () => {
           onNext={handleNext}
           onPrevious={handlePrevious}
           onSkip={handleSkip}
-          cardKey={`hot-take-${currentIndex}`}
+          cardKey={currentHotTake.id}
         />
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
           <Typography variant="body2" color="text.secondary">

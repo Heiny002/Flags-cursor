@@ -1,5 +1,6 @@
 import express from 'express';
 import HotTake from '../models/HotTake';
+import HotTakeResponse from '../models/HotTakeResponse';
 import { auth } from '../middleware/auth';
 
 const router = express.Router();
@@ -163,6 +164,75 @@ router.get('/category/:category', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching hot takes by category:', error);
     res.status(500).json({ message: 'Error fetching hot takes by category' });
+  }
+});
+
+// Submit a hot take response
+router.post('/responses', auth, async (req, res) => {
+  try {
+    const { hotTake, userResponse, matchResponse, isDealbreaker } = req.body;
+    const userId = req.user?._id;
+
+    console.log('Received hot take response:', {
+      hotTake,
+      userId,
+      userResponse,
+      matchResponse,
+      isDealbreaker
+    });
+
+    if (!hotTake) {
+      console.error('Missing hot take ID');
+      return res.status(400).json({ message: 'Hot take ID is required' });
+    }
+
+    if (!userId) {
+      console.error('Missing user ID');
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // Find the hot take
+    const hotTakeDoc = await HotTake.findById(hotTake);
+    if (!hotTakeDoc) {
+      console.error('Hot take not found:', hotTake);
+      return res.status(404).json({ message: 'Hot take not found' });
+    }
+
+    // Check if user has already submitted a response
+    const existingResponse = await HotTakeResponse.findOne({
+      hotTake: hotTakeDoc._id,
+      user: userId
+    });
+
+    if (existingResponse) {
+      console.log('Updating existing response');
+      // Update existing response
+      existingResponse.userResponse = userResponse;
+      existingResponse.matchResponse = matchResponse;
+      existingResponse.isDealbreaker = isDealbreaker;
+      await existingResponse.save();
+    } else {
+      console.log('Creating new response');
+      // Create new response
+      const response = new HotTakeResponse({
+        hotTake: hotTakeDoc._id,
+        user: userId,
+        userResponse,
+        matchResponse,
+        isDealbreaker
+      });
+      await response.save();
+    }
+
+    res.status(200).json({ message: 'Response saved successfully' });
+  } catch (error) {
+    console.error('Error saving hot take response:', error);
+    // Send more detailed error information
+    res.status(500).json({ 
+      message: 'Error saving hot take response',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error instanceof Error && 'errors' in error ? (error as any).errors : undefined
+    });
   }
 });
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Button, Switch, FormControlLabel, Snackbar, Alert } from '@mui/material';
 import PositionButtons from './PositionButtons';
 import { FaExchangeAlt } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 interface HotTakeCardProps {
   title: string;
@@ -130,33 +131,48 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
     try {
       // Log the hot take response to the backend
       const token = localStorage.getItem('token');
-      const result = await fetch('http://localhost:3000/api/hot-takes/responses', {
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      if (!cardKey) {
+        throw new Error('No hot take ID provided');
+      }
+
+      console.log('Submitting response with cardKey:', cardKey);
+      
+      const payload = {
+        hotTake: cardKey,
+        userResponse: response,
+        matchResponse: matchResponse,
+        isDealbreaker: isDealbreaker
+      };
+      
+      console.log('Request payload:', payload);
+      
+      const fetchResponse = await fetch(`${import.meta.env.VITE_API_URL}/hot-takes/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          hotTakeId: cardKey,
-          userResponse: response,
-          matchResponse: matchResponse,
-          isDealbreaker: isDealbreaker
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (!result.ok) {
-        throw new Error('Failed to log hot take response');
+      const data = await fetchResponse.json();
+      console.log('Server response:', data);
+
+      if (!fetchResponse.ok) {
+        throw new Error(data.message || 'Failed to save response');
       }
 
-      // Show confirmation notification
-      setShowConfirmation(true);
-      
-      // Reset card state and move to next card
-      setIsFlipped(false);
+      // Only proceed with navigation if the save was successful
       onNext();
     } catch (error) {
-      console.error('Error logging hot take response:', error);
-      // You might want to show an error notification here
+      console.error('Error saving hot take response:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      // Show error notification
+      toast.error(error instanceof Error ? error.message : 'Failed to save response');
     } finally {
       setIsLoading(false);
     }
