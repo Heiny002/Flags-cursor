@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FooterNav from '../components/FooterNav';
 import HotTakeCard from '../components/HotTakeCard';
 import Header from '../components/Header';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HotTake {
   id: string;
   text: string;
-  author: string;
-  category: string;
+  categories: string[];
+  author: {
+    name: string;
+  };
+  createdAt: string;
 }
 
 const agreementLevels = [
@@ -20,40 +25,75 @@ const agreementLevels = [
 ];
 
 const Flags: React.FC = () => {
+  const { token } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, number | null>>({});
   const [matchRanges, setMatchRanges] = useState<Record<string, [number, number] | null>>({});
   const [dealbreakers, setDealbreakers] = useState<Record<string, boolean>>({});
-  const [hotTakes, setHotTakes] = useState([
-    {
-      title: "Pineapple on pizza is delicious",
-      category: "Food Preferences"
-    },
-    {
-      title: "Dogs are better than cats",
-      category: "Pet Preferences"
-    },
-    // Add more hot takes as needed
-  ]);
+  const [hotTakes, setHotTakes] = useState<HotTake[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch hot takes from the backend
+  useEffect(() => {
+    const fetchHotTakes = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        // Validate the response data
+        const validHotTakes = response.data.filter((hotTake: any) => 
+          hotTake && 
+          hotTake.text && 
+          hotTake.categories && 
+          hotTake.author && 
+          hotTake.author.name
+        );
+
+        if (validHotTakes.length === 0) {
+          throw new Error('No valid hot takes available');
+        }
+
+        setHotTakes(validHotTakes);
+      } catch (err: any) {
+        console.error('Error fetching hot takes:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to fetch hot takes');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchHotTakes();
+    }
+  }, [token]);
 
   const handleResponseChange = (value: number | null) => {
+    if (!currentHotTake?.text) return;
     setResponses(prev => ({
       ...prev,
-      [currentHotTake.title]: value
+      [currentHotTake.text]: value
     }));
   };
 
   const handleMatchChange = (value: [number, number] | null) => {
+    if (!currentHotTake?.text) return;
     setMatchRanges(prev => ({
       ...prev,
-      [currentHotTake.title]: value
+      [currentHotTake.text]: value
     }));
   };
 
   const handleDealbreakerChange = (checked: boolean) => {
+    if (!currentHotTake?.text) return;
     setDealbreakers(prev => ({
       ...prev,
-      [currentHotTake.title]: checked
+      [currentHotTake.text]: checked
     }));
   };
 
@@ -70,11 +110,66 @@ const Flags: React.FC = () => {
   };
 
   const handleSkip = () => {
-    // Move to next hot take without saving any responses
-    setCurrentIndex(prev => prev + 1);
+    if (currentIndex < hotTakes.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16 flex items-center justify-center">
+          <CircularProgress />
+        </div>
+        <FooterNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16">
+          <Alert severity="error">{error}</Alert>
+        </div>
+        <FooterNav />
+      </div>
+    );
+  }
+
+  if (hotTakes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16">
+          <Typography variant="h4" gutterBottom>
+            No Hot Takes Available
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Be the first to submit a hot take!
+          </Typography>
+        </div>
+        <FooterNav />
+      </div>
+    );
+  }
+
   const currentHotTake = hotTakes[currentIndex];
+  
+  // Additional safety check
+  if (!currentHotTake || !currentHotTake.author) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16">
+          <Alert severity="error">Invalid hot take data</Alert>
+        </div>
+        <FooterNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -87,8 +182,9 @@ const Flags: React.FC = () => {
           Share your opinions on these statements and see how they match with potential partners.
         </Typography>
         <HotTakeCard
-          title={currentHotTake.title}
-          category={currentHotTake.category}
+          title={currentHotTake.text}
+          category={currentHotTake.categories?.[0] || 'Uncategorized'} // Provide fallback
+          author={currentHotTake.author.name}
           onResponseChange={handleResponseChange}
           onMatchChange={handleMatchChange}
           onDealbreakerChange={handleDealbreakerChange}
@@ -98,23 +194,11 @@ const Flags: React.FC = () => {
           cardKey={`hot-take-${currentIndex}`}
         />
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={currentIndex === hotTakes.length - 1}
-          >
-            Next
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-          >
-            Previous
-          </Button>
+          <Typography variant="body2" color="text.secondary">
+            {currentIndex + 1} of {hotTakes.length}
+          </Typography>
         </Box>
       </div>
-      
       <FooterNav />
     </div>
   );

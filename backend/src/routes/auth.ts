@@ -50,16 +50,37 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Missing credentials',
+        details: {
+          email: !email ? 'Email is required' : null,
+          password: !password ? 'Password is required' : null
+        }
+      });
+    }
+
     // Find user
     const user = await User.findOne({ email });
+    console.log('Login attempt:', { email, userFound: !!user });
+    
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        details: 'No account found with this email'
+      });
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log('Password check:', { email, isMatch });
+    
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        details: 'Incorrect password'
+      });
     }
 
     // Generate JWT token
@@ -69,16 +90,24 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    // Log successful login
+    console.log('Successful login:', { email, userId: user._id });
+
     res.json({
       token,
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
-      },
+        hasCompletedInitialQuestionnaire: user.hasCompletedInitialQuestionnaire
+      }
     });
   } catch (error) {
-    res.status(400).json({ error: 'Error logging in' });
+    console.error('Login error:', error);
+    res.status(500).json({
+      error: 'Error logging in',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
