@@ -1,51 +1,84 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IHotTakeResponse extends mongoose.Document {
+// Interface defining the structure of a hot take response
+// CRITICAL: This interface must match the frontend's expected response structure
+export interface IHotTakeResponse extends Document {
+  // Reference to the hot take being responded to
+  // CRITICAL: This field name must match what's used in the frontend (hotTake)
   hotTake: mongoose.Types.ObjectId;
+  
+  // Reference to the user who submitted the response
+  // CRITICAL: This field name must match what's used in the frontend (user)
   user: mongoose.Types.ObjectId;
-  userResponse: number | null;
-  matchResponse: [number, number] | null;
+  
+  // User's rating of the hot take (1-5)
+  userResponse: number;
+  
+  // Range of acceptable responses from potential matches (1-5)
+  matchResponse: number[];
+  
+  // Whether this hot take is a dealbreaker for the user
   isDealbreaker: boolean;
+  
+  // Timestamps for when the response was created/updated
   createdAt: Date;
   updatedAt: Date;
 }
 
-const hotTakeResponseSchema = new mongoose.Schema({
+// Schema definition for hot take responses
+// CRITICAL: The unique index on {hotTake, user} ensures one response per user per hot take
+const hotTakeResponseSchema = new Schema<IHotTakeResponse>({
+  // Reference to the hot take being responded to
+  // CRITICAL: This field name must match what's used in the frontend (hotTake)
   hotTake: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'HotTake',
-    required: true,
+    required: true
   },
+  
+  // Reference to the user who submitted the response
+  // CRITICAL: This field name must match what's used in the frontend (user)
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: true
   },
+  
+  // User's rating of the hot take (1-5)
   userResponse: {
     type: Number,
-    required: false,
+    required: true,
     min: 1,
-    max: 5,
+    max: 5
   },
+  
+  // Range of acceptable responses from potential matches (1-5)
   matchResponse: {
     type: [Number],
-    required: false,
+    required: true,
     validate: {
-      validator: function(v: number[]) {
-        return v.length === 2 && v[0] >= 1 && v[0] <= 5 && v[1] >= 1 && v[1] <= 5 && v[0] <= v[1];
+      validator: function(arr: number[]) {
+        return arr.length === 2 && arr[0] <= arr[1] && arr[0] >= 1 && arr[1] <= 5;
       },
-      message: 'Match response must be a valid range between 1 and 5'
+      message: 'Match response must be an array of two numbers between 1 and 5, with first number less than or equal to second'
     }
   },
+  
+  // Whether this hot take is a dealbreaker for the user
   isDealbreaker: {
     type: Boolean,
-    default: false,
+    default: false
   }
 }, {
-  timestamps: true,
+  timestamps: true
 });
 
-// Index for efficient querying
+// CRITICAL: This unique index ensures one response per user per hot take
+// DO NOT MODIFY: Changing this index will affect the uniqueness constraint
 hotTakeResponseSchema.index({ hotTake: 1, user: 1 }, { unique: true });
 
-export default mongoose.model<IHotTakeResponse>('HotTakeResponse', hotTakeResponseSchema); 
+// Create and export the model
+// CRITICAL: The model name 'HotTakeResponse' must match what's used in the routes
+const HotTakeResponse = mongoose.model<IHotTakeResponse>('HotTakeResponse', hotTakeResponseSchema);
+
+export default HotTakeResponse; 

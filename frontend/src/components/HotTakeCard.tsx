@@ -78,9 +78,11 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   const handleResponseChange = (value: number) => {
     setResponse(value);
     onResponseChange(value);
-    // Auto-flip to back when a response is selected
+    // Auto-flip to back when a response is selected with a 1-second delay
     if (value !== 0) {
-      setIsFlipped(true);
+      setTimeout(() => {
+        setIsFlipped(true);
+      }, 500);
     }
   };
 
