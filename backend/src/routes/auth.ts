@@ -61,9 +61,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await User.findOne({ email });
-    console.log('Login attempt:', { email, userFound: !!user });
+    // Convert email to lowercase for case-insensitive comparison
+    const normalizedEmail = email.toLowerCase();
+
+    // Find user with case-insensitive email
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } });
+    console.log('Login attempt:', { email: normalizedEmail, userFound: !!user });
     
     if (!user) {
       return res.status(401).json({
@@ -74,7 +77,7 @@ router.post('/login', async (req, res) => {
 
     // Check password
     const isMatch = await user.comparePassword(password);
-    console.log('Password check:', { email, isMatch });
+    console.log('Password check:', { email: normalizedEmail, isMatch });
     
     if (!isMatch) {
       return res.status(401).json({
@@ -91,7 +94,7 @@ router.post('/login', async (req, res) => {
     );
 
     // Log successful login
-    console.log('Successful login:', { email, userId: user._id });
+    console.log('Successful login:', { email: normalizedEmail, userId: user._id });
 
     res.json({
       token,

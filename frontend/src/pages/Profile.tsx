@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -11,14 +11,35 @@ import {
   Grid,
   Chip,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  CircularProgress,
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import FooterNav from '../components/FooterNav';
+import axios from 'axios';
+
+interface HotTakeStats {
+  text: string;
+  categories: string[];
+  createdAt: string;
+  stats: {
+    totalResponses: number;
+    averagePosition: number | null;
+    skipCount: number;
+  };
+}
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useAuth();
+  const { user, token, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +51,33 @@ const Profile: React.FC = () => {
     interests: user?.profile?.interests || [],
   });
   const [newInterest, setNewInterest] = useState('');
+  const [hotTakes, setHotTakes] = useState<HotTakeStats[]>([]);
+  const [selectedHotTake, setSelectedHotTake] = useState<HotTakeStats | null>(null);
+  const [loadingHotTakes, setLoadingHotTakes] = useState(false);
+
+  useEffect(() => {
+    const fetchHotTakes = async () => {
+      if (!token) return;
+      
+      setLoadingHotTakes(true);
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/hot-takes/my-hot-takes`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        setHotTakes(response.data);
+      } catch (error) {
+        console.error('Error fetching hot takes:', error);
+        setError('Failed to fetch your hot takes');
+      } finally {
+        setLoadingHotTakes(false);
+      }
+    };
+
+    fetchHotTakes();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +116,14 @@ const Profile: React.FC = () => {
     navigate('/login');
     return null;
   }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div className="page-container">
@@ -202,7 +258,126 @@ const Profile: React.FC = () => {
             </Grid>
           </form>
         </Paper>
+
+        {/* My Hot Takes Section */}
+        <Paper elevation={3} className="card">
+          <Typography variant="h5" component="h2" className="heading-1 mb-4">
+            My Hot Takes
+          </Typography>
+
+          {loadingHotTakes ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : hotTakes.length > 0 ? (
+            <List>
+              {hotTakes.map((hotTake, index) => (
+                <React.Fragment key={index}>
+                  <ListItem 
+                    button 
+                    onClick={() => setSelectedHotTake(hotTake)}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={hotTake.text}
+                      secondary={
+                        <React.Fragment>
+                          <Typography component="span" variant="body2" color="text.primary">
+                            {formatDate(hotTake.createdAt)}
+                          </Typography>
+                          <br />
+                          {hotTake.categories.map((category) => (
+                            <Chip
+                              key={category}
+                              label={category}
+                              size="small"
+                              sx={{ mr: 0.5, mt: 0.5 }}
+                            />
+                          ))}
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                  {index < hotTakes.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body1" color="text.secondary" textAlign="center" p={3}>
+              You haven't submitted any hot takes yet.
+            </Typography>
+          )}
+        </Paper>
       </Container>
+
+      {/* Stats Dialog */}
+      <Dialog 
+        open={!!selectedHotTake} 
+        onClose={() => setSelectedHotTake(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Hot Take Stats</DialogTitle>
+        <DialogContent>
+          {selectedHotTake && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                {selectedHotTake.text}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Posted on {formatDate(selectedHotTake.createdAt)}
+              </Typography>
+              <Box mt={2}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Categories:
+                </Typography>
+                <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                  {selectedHotTake.categories.map((category) => (
+                    <Chip key={category} label={category} size="small" />
+                  ))}
+                </Box>
+              </Box>
+              <Box mt={3}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Statistics:
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Total Responses"
+                      secondary={selectedHotTake.stats.totalResponses}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Average Position"
+                      secondary={
+                        selectedHotTake.stats.averagePosition 
+                          ? selectedHotTake.stats.averagePosition.toFixed(2)
+                          : 'No responses yet'
+                      }
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Times Skipped"
+                      secondary={selectedHotTake.stats.skipCount}
+                    />
+                  </ListItem>
+                </List>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedHotTake(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       <FooterNav />
     </div>
   );

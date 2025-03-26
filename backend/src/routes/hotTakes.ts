@@ -62,10 +62,14 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get all hot takes
+// Get all hot takes (excluding user's own)
 router.get('/', auth, async (req, res) => {
   try {
-    const hotTakes = await HotTake.find()
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const hotTakes = await HotTake.find({ author: { $ne: req.user._id } })
       .sort({ createdAt: -1 })
       .populate('author', 'name')
       .limit(50);
@@ -74,6 +78,75 @@ router.get('/', auth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching hot takes:', error);
     res.status(500).json({ message: 'Error fetching hot takes' });
+  }
+});
+
+// Get user's submitted hot takes with stats
+router.get('/my-hot-takes', auth, async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const userHotTakes = await HotTake.aggregate([
+      // Match hot takes by the current user
+      { $match: { author: req.user._id } },
+      
+      // Lookup responses for each hot take
+      { $lookup: {
+        from: 'hottakeresponses',
+        localField: '_id',
+        foreignField: 'hotTakeId',
+        as: 'responses'
+      }},
+      
+      // Calculate statistics
+      { $project: {
+        text: 1,
+        categories: 1,
+        createdAt: 1,
+        stats: {
+          totalResponses: { $size: '$responses' },
+          averagePosition: {
+            $cond: {
+              if: { $eq: [{ $size: '$responses' }, 0] },
+              then: null,
+              else: { 
+                $avg: {
+                  $filter: {
+                    input: '$responses.userResponse',
+                    as: 'response',
+                    cond: { $ne: ['$$response', null] }
+                  }
+                }
+              }
+            }
+          },
+          skipCount: {
+            $size: {
+              $filter: {
+                input: '$responses',
+                as: 'response',
+                cond: { 
+                  $and: [
+                    { $eq: ['$$response.userResponse', null] },
+                    { $eq: ['$$response.matchResponse', null] }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }},
+      
+      // Sort by creation date
+      { $sort: { createdAt: -1 } }
+    ]);
+
+    res.json(userHotTakes);
+  } catch (error) {
+    console.error('Error fetching user hot takes:', error);
+    res.status(500).json({ message: 'Error fetching user hot takes' });
   }
 });
 

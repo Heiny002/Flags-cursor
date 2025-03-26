@@ -7,6 +7,7 @@ import Flags from './pages/Flags';
 import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
 import HotTakeSubmission from './pages/HotTakeSubmission';
+import Layout from './components/Layout';
 import { useState } from 'react';
 import './styles/design-system.css';
 
@@ -30,57 +31,59 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/flags"
-            element={
-              <ProtectedRoute>
-                <Flags />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/conversations"
-            element={
-              <ProtectedRoute>
-                <Conversations />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
+        <Layout>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/flags"
+              element={
+                <ProtectedRoute>
+                  <Flags />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/conversations"
+              element={
+                <ProtectedRoute>
+                  <Conversations />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/hot-takes"
-            element={
-              <ProtectedRoute>
-                <HotTakeSubmission />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route path="/" element={<Navigate to="/flags" replace />} />
-        </Routes>
+            <Route
+              path="/hot-takes"
+              element={
+                <ProtectedRoute>
+                  <HotTakeSubmission />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route path="/" element={<Navigate to="/flags" replace />} />
+          </Routes>
+        </Layout>
       </Router>
     </AuthProvider>
   );

@@ -1,18 +1,16 @@
 import React from 'react';
-import { Box, Button } from '@mui/material';
+import { Box, Button, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { FiLogOut } from 'react-icons/fi';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
-  const isLoggedIn = localStorage.getItem('token') !== null;
+  const { logout, isAuthenticated } = useAuth();
 
-  const handleAuthClick = () => {
-    if (isLoggedIn) {
-      localStorage.removeItem('token');
-      window.location.reload();
-    } else {
-      navigate('/login');
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -24,25 +22,34 @@ const Header: React.FC = () => {
         right: 0,
         height: '64px',
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0 24px',
-        background: 'transparent',
+        backgroundColor: 'white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         zIndex: 1000,
       }}
     >
-      <Button
-        variant="text"
-        onClick={handleAuthClick}
-        sx={{
-          color: 'gray.700',
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          },
-        }}
-      >
-        {isLoggedIn ? 'Logout' : 'Login'}
-      </Button>
+      <Box sx={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'primary.main' }}>
+        Flags
+      </Box>
+      
+      {isAuthenticated && (
+        <IconButton
+          onClick={handleLogout}
+          sx={{
+            color: 'gray.600',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              color: 'primary.main',
+            },
+            transition: 'all 0.2s ease-in-out',
+          }}
+          aria-label="logout"
+        >
+          <FiLogOut size={20} />
+        </IconButton>
+      )}
     </Box>
   );
 };
