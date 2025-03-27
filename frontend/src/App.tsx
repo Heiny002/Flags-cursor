@@ -8,6 +8,7 @@ import Flags from './pages/Flags';
 import Conversations from './pages/Conversations';
 import Settings from './pages/Settings';
 import HotTakeSubmission from './pages/HotTakeSubmission';
+import Onboarding from './pages/Onboarding';
 import Layout from './components/Layout';
 import { useState } from 'react';
 import './styles/design-system.css';
@@ -79,6 +80,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <HotTakeSubmission />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Onboarding />
                 </ProtectedRoute>
               }
             />

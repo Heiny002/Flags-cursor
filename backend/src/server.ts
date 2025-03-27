@@ -7,6 +7,7 @@ import { resetHotTakeResponses } from './utils/resetHotTakeResponses';
 import authRoutes from './routes/auth';
 import hotTakesRoutes from './routes/hotTakes';
 import profileRoutes from './routes/profiles';
+import onboardingRoutes from './routes/onboarding';
 import HotTakeResponse from './models/HotTakeResponse';
 
 // Load environment variables
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/hot-takes', hotTakesRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 // Reset HotTakeResponse collection on server start
 async function resetHotTakeResponseCollection() {
