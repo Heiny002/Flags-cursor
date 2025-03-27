@@ -70,10 +70,61 @@ router.get('/', auth, async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    const hotTakes = await HotTake.find({ author: { $ne: req.user._id } })
-      .sort({ createdAt: -1 })
-      .populate('author', 'name')
-      .limit(50);
+    // Get hot takes that the user hasn't responded to yet
+    const hotTakes = await HotTake.aggregate([
+      // Match hot takes not authored by the current user
+      { $match: { author: { $ne: req.user._id } } },
+      
+      // Lookup responses for each hot take
+      { $lookup: {
+        from: 'hottakeresponses',
+        let: { hotTakeId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$hotTakeId', '$$hotTakeId'] },
+                  { $eq: ['$userId', req.user._id] }
+                ]
+              }
+            }
+          }
+        ],
+        as: 'userResponses'
+      }},
+      
+      // Filter out hot takes that the user has already responded to
+      { $match: { userResponses: { $size: 0 } } },
+      
+      // Populate author information
+      { $lookup: {
+        from: 'users',
+        localField: 'author',
+        foreignField: '_id',
+        as: 'authorInfo'
+      }},
+      
+      // Unwind the author array
+      { $unwind: '$authorInfo' },
+      
+      // Project the final shape
+      { $project: {
+        _id: 1,
+        text: 1,
+        categories: 1,
+        createdAt: 1,
+        author: {
+          name: '$authorInfo.name'
+        }
+      }},
+      
+      // Sort by creation date
+      { $sort: { createdAt: -1 } },
+      
+      // Limit results
+      { $limit: 50 }
+    ]);
 
     res.json(hotTakes);
   } catch (error) {
@@ -170,18 +221,18 @@ router.get('/category/:category', auth, async (req, res) => {
 // Submit a hot take response
 router.post('/responses', auth, async (req, res) => {
   try {
-    const { hotTake, userResponse, matchResponse, isDealbreaker } = req.body;
+    const { hotTakeId, userResponse, matchResponse, isDealbreaker } = req.body;
     const userId = req.user?._id;
 
     console.log('Received hot take response:', {
-      hotTake,
+      hotTakeId,
       userId,
       userResponse,
       matchResponse,
       isDealbreaker
     });
 
-    if (!hotTake) {
+    if (!hotTakeId) {
       console.error('Missing hot take ID');
       return res.status(400).json({ message: 'Hot take ID is required' });
     }
@@ -192,16 +243,16 @@ router.post('/responses', auth, async (req, res) => {
     }
 
     // Find the hot take
-    const hotTakeDoc = await HotTake.findById(hotTake);
+    const hotTakeDoc = await HotTake.findById(hotTakeId);
     if (!hotTakeDoc) {
-      console.error('Hot take not found:', hotTake);
+      console.error('Hot take not found:', hotTakeId);
       return res.status(404).json({ message: 'Hot take not found' });
     }
 
     // Check if user has already submitted a response
     const existingResponse = await HotTakeResponse.findOne({
-      hotTake: hotTakeDoc._id,
-      user: userId
+      hotTakeId: hotTakeDoc._id,
+      userId: userId
     });
 
     if (existingResponse) {
@@ -215,8 +266,8 @@ router.post('/responses', auth, async (req, res) => {
       console.log('Creating new response');
       // Create new response
       const response = new HotTakeResponse({
-        hotTake: hotTakeDoc._id,
-        user: userId,
+        hotTakeId: hotTakeDoc._id,
+        userId: userId,
         userResponse,
         matchResponse,
         isDealbreaker

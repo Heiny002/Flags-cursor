@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface HotTake {
   id: string;
@@ -26,6 +27,7 @@ const agreementLevels = [
 
 const Flags: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, number | null>>({});
   const [matchRanges, setMatchRanges] = useState<Record<string, [number, number] | null>>({});
@@ -34,47 +36,48 @@ const Flags: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch hot takes from the backend
-  useEffect(() => {
-    const fetchHotTakes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        // Validate the response data
-        const validHotTakes = response.data.filter((hotTake: any) => 
-          hotTake && 
-          hotTake._id && // Ensure we have a valid MongoDB ID
-          hotTake.text && 
-          hotTake.categories && 
-          hotTake.author && 
-          hotTake.author.name
-        ).map((hotTake: any) => ({
-          id: hotTake._id, // Map _id to id for frontend use
-          text: hotTake.text,
-          categories: hotTake.categories,
-          author: hotTake.author,
-          createdAt: hotTake.createdAt
-        }));
-
-        if (validHotTakes.length === 0) {
-          throw new Error('No valid hot takes available');
+  // Move fetchHotTakes outside useEffect so it can be reused
+  const fetchHotTakes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
+      });
+      
+      // Validate the response data
+      const validHotTakes = response.data.filter((hotTake: any) => 
+        hotTake && 
+        hotTake._id && // Ensure we have a valid MongoDB ID
+        hotTake.text && 
+        hotTake.categories && 
+        hotTake.author && 
+        hotTake.author.name
+      ).map((hotTake: any) => ({
+        id: hotTake._id, // Map _id to id for frontend use
+        text: hotTake.text,
+        categories: hotTake.categories,
+        author: hotTake.author,
+        createdAt: hotTake.createdAt
+      }));
 
-        setHotTakes(validHotTakes);
-      } catch (err: any) {
-        console.error('Error fetching hot takes:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to fetch hot takes');
-      } finally {
-        setLoading(false);
+      if (validHotTakes.length === 0) {
+        throw new Error('No valid hot takes available');
       }
-    };
 
+      setHotTakes(validHotTakes);
+    } catch (err: any) {
+      console.error('Error fetching hot takes:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch hot takes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch of hot takes
+  useEffect(() => {
     if (token) {
       fetchHotTakes();
     }
@@ -104,7 +107,7 @@ const Flags: React.FC = () => {
     }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentIndex < hotTakes.length - 1) {
       console.log('Moving to next card. Current index:', currentIndex);
       console.log('Current hot take:', hotTakes[currentIndex]);
@@ -141,6 +144,15 @@ const Flags: React.FC = () => {
         console.log('Updated dealbreakers:', newDealbreakers);
         return newDealbreakers;
       });
+
+      // Refresh the hot takes list to get updated data
+      try {
+        await fetchHotTakes();
+      } catch (error) {
+        console.error('Error refreshing hot takes:', error);
+        // If there's an error refreshing, we should still proceed
+        // but log the error for debugging
+      }
     }
   };
 
@@ -186,11 +198,20 @@ const Flags: React.FC = () => {
         <Header />
         <div className="max-w-xl mx-auto px-4 py-6 pb-24 mt-16">
           <Typography variant="h4" gutterBottom>
-            No Hot Takes Available
+            No More Hot Takes Available
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Be the first to submit a hot take!
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+            You've responded to all available hot takes! Why not submit your own?
           </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            onClick={() => navigate('/hot-takes')}
+            sx={{ mt: 2 }}
+          >
+            Submit a Hot Take
+          </Button>
         </div>
         <FooterNav />
       </div>

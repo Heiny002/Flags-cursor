@@ -144,7 +144,7 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
       console.log('Submitting response with cardKey:', cardKey);
       
       const payload = {
-        hotTake: cardKey,
+        hotTakeId: cardKey,
         userResponse: response,
         matchResponse: matchResponse,
         isDealbreaker: isDealbreaker
@@ -168,6 +168,16 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
         throw new Error(data.message || 'Failed to save response');
       }
 
+      // Show success notification
+      toast.success('Response saved successfully!');
+      
+      // Reset the card state
+      setIsFlipped(false);
+      setResponse(null);
+      setMatchResponse(null);
+      setIsDealbreaker(false);
+      setIsSelectingRange(false);
+      
       // Only proceed with navigation if the save was successful
       onNext();
     } catch (error) {

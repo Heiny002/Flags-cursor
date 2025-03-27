@@ -4,12 +4,12 @@ import mongoose, { Schema, Document } from 'mongoose';
 // CRITICAL: This interface must match the frontend's expected response structure
 export interface IHotTakeResponse extends Document {
   // Reference to the hot take being responded to
-  // CRITICAL: This field name must match what's used in the frontend (hotTake)
-  hotTake: mongoose.Types.ObjectId;
+  // CRITICAL: This field name must match what's used in the frontend (hotTakeId)
+  hotTakeId: mongoose.Types.ObjectId;
   
   // Reference to the user who submitted the response
-  // CRITICAL: This field name must match what's used in the frontend (user)
-  user: mongoose.Types.ObjectId;
+  // CRITICAL: This field name must match what's used in the frontend (userId)
+  userId: mongoose.Types.ObjectId;
   
   // User's rating of the hot take (1-5)
   userResponse: number;
@@ -26,19 +26,19 @@ export interface IHotTakeResponse extends Document {
 }
 
 // Schema definition for hot take responses
-// CRITICAL: The unique index on {hotTake, user} ensures one response per user per hot take
+// CRITICAL: The unique index on {hotTakeId, userId} ensures one response per user per hot take
 const hotTakeResponseSchema = new Schema<IHotTakeResponse>({
   // Reference to the hot take being responded to
-  // CRITICAL: This field name must match what's used in the frontend (hotTake)
-  hotTake: {
+  // CRITICAL: This field name must match what's used in the frontend (hotTakeId)
+  hotTakeId: {
     type: Schema.Types.ObjectId,
     ref: 'HotTake',
     required: true
   },
   
   // Reference to the user who submitted the response
-  // CRITICAL: This field name must match what's used in the frontend (user)
-  user: {
+  // CRITICAL: This field name must match what's used in the frontend (userId)
+  userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -75,7 +75,7 @@ const hotTakeResponseSchema = new Schema<IHotTakeResponse>({
 
 // CRITICAL: This unique index ensures one response per user per hot take
 // DO NOT MODIFY: Changing this index will affect the uniqueness constraint
-hotTakeResponseSchema.index({ hotTake: 1, user: 1 }, { unique: true });
+hotTakeResponseSchema.index({ hotTakeId: 1, userId: 1 }, { unique: true });
 
 // Create and export the model
 // CRITICAL: The model name 'HotTakeResponse' must match what's used in the routes
