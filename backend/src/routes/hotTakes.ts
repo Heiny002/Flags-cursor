@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
 interface PopulatedAuthor {
   _id: mongoose.Types.ObjectId;
   email: string;
-  username?: string;
+  name?: string;
 }
 
 interface AuthRequest extends Request {
@@ -28,58 +28,189 @@ router.get('/', auth, async (req: Request, res: Response) => {
     const userId = req.user._id;
     console.log('Fetching hot takes for user:', userId);
 
-    // Get all active hot takes (both regular and initial)
-    const hotTakes = await HotTake.find({ isActive: true })
-      .populate<{ author: PopulatedAuthor }>('author', 'username email')
-      .sort({ createdAt: -1 });
+    // First, get all hot takes without filtering to see what's in the database
+    const allHotTakes = await HotTake.find({ isActive: true })
+      .populate<{ author: PopulatedAuthor }>('author', 'name email');
+    console.log('All active hot takes in database:', allHotTakes.length);
+    
+    // Look for Monica's older hot takes regardless of active status
+    const monicasOldHotTakes = await HotTake.find({
+      $or: [
+        { text: "Elon Musk is a fuck" },
+        { text: "Men shouldn't pay for everything" }
+      ]
+    }).populate<{ author: PopulatedAuthor }>('author', 'name email');
 
-    console.log('Found active hot takes:', hotTakes.length);
+    console.log('Monica\'s older hot takes (all statuses):', monicasOldHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
 
-    // Format the response to include author name and user's response status
-    const formattedHotTakes = hotTakes.map(hotTake => {
-      try {
-        // Handle cases where author might be null or invalid
-        const authorName = hotTake.author ? 
-          (hotTake.author.username || hotTake.author.email || 'Anonymous') : 
-          'Anonymous';
-
-        const hasResponded = hotTake.responses.some(response => 
-          response.user.toString() === userId.toString()
-        );
-        
-        const isAuthor = hotTake.author ? 
-          hotTake.author._id.toString() === userId.toString() : 
-          false;
-
-        return {
-          _id: hotTake._id,
-          text: hotTake.text,
-          categories: hotTake.categories,
-          createdAt: hotTake.createdAt,
-          authorName,
-          hasResponded,
-          isAuthor,
-          userResponse: hasResponded ? hotTake.responses.find(r => r.user.toString() === userId.toString())?.agree : null,
-          isInitial: hotTake.isInitial || false
-        };
-      } catch (error) {
-        console.error('Error formatting hot take:', hotTake._id, error);
-        // Return a basic version of the hot take if there's an error
-        return {
-          _id: hotTake._id,
-          text: hotTake.text,
-          categories: hotTake.categories,
-          createdAt: hotTake.createdAt,
-          authorName: 'Anonymous',
-          hasResponded: false,
-          isAuthor: false,
-          userResponse: null,
-          isInitial: hotTake.isInitial || false
-        };
-      }
+    // Also look for any hot takes by Monica's user ID
+    const monicasUser = await User.findOne({ 
+      $or: [
+        { name: 'Monica Schroeder' },
+        { email: 'monica.schroeder@example.com' }
+      ]
     });
 
-    console.log('Final formatted hot takes:', JSON.stringify(formattedHotTakes, null, 2));
+    if (monicasUser) {
+      const monicasHotTakesByUserId = await HotTake.find({
+        author: monicasUser._id
+      }).populate<{ author: PopulatedAuthor }>('author', 'name email');
+
+      console.log('All hot takes by Monica\'s user ID:', monicasHotTakesByUserId.map(ht => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.author ? {
+          id: ht.author._id,
+          name: ht.author.name,
+          email: ht.author.email
+        } : 'No author',
+        isActive: ht.isActive,
+        responses: ht.responses.length,
+        createdAt: ht.createdAt,
+        isInitial: ht.isInitial
+      })));
+    }
+    
+    // Log all hot takes with their author information
+    console.log('All hot takes with author info:', allHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
+    
+    // Log Monica's hot takes specifically
+    const monicasHotTakes = allHotTakes.filter(ht => 
+      ht.author && 
+      (ht.author.name === 'Monica Schroeder' || 
+       ht.author.email === 'monica.schroeder@example.com')
+    );
+    console.log('Monica\'s hot takes:', monicasHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
+
+    // Get all active hot takes (both regular and initial)
+    const mainHotTakes = await HotTake.find({ 
+      isActive: true
+    })
+    .populate<{ author: PopulatedAuthor }>('author', 'name email')
+    .sort({ createdAt: -1 });
+
+    // Get Monica's hot takes to ensure they're included
+    if (monicasUser) {
+      // Get ALL of Monica's hot takes, regardless of active status
+      const monicasHotTakes = await HotTake.find({
+        author: monicasUser._id
+      }).populate<{ author: PopulatedAuthor }>('author', 'name email');
+
+      console.log('Found Monica\'s hot takes:', monicasHotTakes.length);
+      console.log('Monica\'s hot takes details:', monicasHotTakes.map(ht => ({
+        id: ht._id,
+        text: ht.text,
+        isActive: ht.isActive,
+        createdAt: ht.createdAt
+      })));
+
+      // Create a map of existing hot take IDs
+      const existingHotTakeIds = new Set(mainHotTakes.map(ht => ht._id.toString()));
+      
+      // Add any of Monica's hot takes that aren't already in mainHotTakes
+      monicasHotTakes.forEach(hotTake => {
+        if (!existingHotTakeIds.has(hotTake._id.toString())) {
+          console.log('Adding Monica\'s hot take to mainHotTakes:', hotTake.text);
+          mainHotTakes.push(hotTake);
+        }
+      });
+    }
+
+    // Get user's hot takes (both initial and regular)
+    const userHotTakes = await HotTake.find({
+      author: new mongoose.Types.ObjectId(userId)
+    });
+
+    // Get user's responses
+    const userResponses = await HotTakeResponse.find({
+      userId: new mongoose.Types.ObjectId(userId)
+    });
+
+    // Create maps for efficient lookup
+    const userHotTakesMap = new Map(userHotTakes.map(ht => [ht._id.toString(), true]));
+    const userResponsesMap = new Map(userResponses.map(r => [r.hotTakeId.toString(), true]));
+
+    // Format the hot takes
+    const formattedHotTakes = mainHotTakes
+      .filter(hotTake => {
+        // Filter out hot takes the user has authored
+        if (userHotTakesMap.has(hotTake._id.toString())) {
+          return false;
+        }
+        // Filter out hot takes the user has responded to
+        if (userResponsesMap.has(hotTake._id.toString())) {
+          return false;
+        }
+        return true;
+      })
+      .map(hotTake => ({
+        _id: hotTake._id,
+        text: hotTake.text,
+        categories: hotTake.categories?.length > 0 ? hotTake.categories : ['No Category'],
+        createdAt: hotTake.createdAt,
+        authorName: hotTake.author?.name || 'Anonymous',
+        isInitial: hotTake.isInitial || false,
+        isActive: true,
+        responses: 0,
+        author: {
+          id: hotTake.author?._id || 'anonymous',
+          name: hotTake.author?.name || 'Anonymous',
+          email: hotTake.author?.email || 'anonymous@example.com'
+        },
+        hasResponded: false,
+        isAuthor: false,
+        userResponse: null
+      }));
+
+    console.log('Total hot takes in mainHotTakes:', mainHotTakes.length);
+    console.log('Found hot takes after filtering:', formattedHotTakes.length);
+    console.log('Hot takes details:', formattedHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.authorName,
+      isActive: true,
+      responses: ht.responses || 0,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial,
+      categories: ht.categories || ['No Category']
+    })));
+
     res.json(formattedHotTakes);
   } catch (error) {
     console.error('Error fetching hot takes:', error);
@@ -122,6 +253,15 @@ router.post('/', auth, async (req: Request, res: Response) => {
       isActive: true,
     });
 
+    // Log the hot take before saving
+    console.log('Creating hot take:', {
+      text: hotTake.text,
+      categories: hotTake.categories,
+      author: userId,
+      isInitial: hotTake.isInitial,
+      isActive: hotTake.isActive
+    });
+
     // Validate the document before saving
     const validationError = hotTake.validateSync();
     if (validationError) {
@@ -134,9 +274,29 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     // Save the hot take
     const savedHotTake = await hotTake.save();
-    console.log('Hot take saved successfully:', savedHotTake);
+    
+    // Populate the author information after saving
+    const populatedHotTake = await HotTake.findById(savedHotTake._id)
+      .populate<{ author: PopulatedAuthor }>('author', 'name email');
+    
+    if (!populatedHotTake) {
+      console.error('Failed to populate hot take after saving');
+      return res.status(500).json({ error: 'Failed to save hot take' });
+    }
+    
+    console.log('Hot take saved successfully:', {
+      id: populatedHotTake._id,
+      text: populatedHotTake.text,
+      author: populatedHotTake.author ? {
+        id: populatedHotTake.author._id,
+        name: populatedHotTake.author.name,
+        email: populatedHotTake.author.email
+      } : 'No author',
+      isActive: populatedHotTake.isActive,
+      isInitial: populatedHotTake.isInitial
+    });
 
-    res.status(201).json(savedHotTake);
+    res.status(201).json(populatedHotTake);
   } catch (error) {
     console.error('Error creating hot take:', error);
     if (error instanceof mongoose.Error.ValidationError) {
@@ -412,6 +572,142 @@ router.post('/responses', auth, async (req, res) => {
       message: 'Error saving hot take response',
       error: error instanceof Error ? error.message : 'Unknown error',
       details: error instanceof Error && 'errors' in error ? (error as any).errors : undefined
+    });
+  }
+});
+
+// Debug endpoint to investigate Monica's hot takes
+router.get('/debug-monica', auth, async (req: Request, res: Response) => {
+  try {
+    // Find Monica's user account
+    const monicasUser = await User.findOne({ 
+      $or: [
+        { name: 'Monica Schroeder' },
+        { email: 'monica.schroeder@example.com' }
+      ]
+    });
+
+    console.log('Monica\'s user account:', monicasUser ? {
+      id: monicasUser._id,
+      name: monicasUser.name,
+      email: monicasUser.email
+    } : 'Not found');
+
+    if (!monicasUser) {
+      return res.status(404).json({ error: 'Monica\'s account not found' });
+    }
+
+    // Find all hot takes by Monica's user ID
+    const monicasHotTakes = await HotTake.find({
+      author: monicasUser._id
+    }).populate<{ author: PopulatedAuthor }>('author', 'name email');
+
+    console.log('All hot takes by Monica:', monicasHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
+
+    // Find specific hot takes by text
+    const specificHotTakes = await HotTake.find({
+      $or: [
+        { text: "Elon Musk is a fuck" },
+        { text: "Men shouldn't pay for everything" }
+      ]
+    }).populate<{ author: PopulatedAuthor }>('author', 'name email');
+
+    console.log('Specific hot takes:', specificHotTakes.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
+
+    // Find all hot takes with Monica's name as author
+    const hotTakesWithMonicasName = await HotTake.find({
+      'author.name': 'Monica Schroeder'
+    }).populate<{ author: PopulatedAuthor }>('author', 'name email');
+
+    console.log('Hot takes with Monica\'s name:', hotTakesWithMonicasName.map(ht => ({
+      id: ht._id,
+      text: ht.text,
+      author: ht.author ? {
+        id: ht.author._id,
+        name: ht.author.name,
+        email: ht.author.email
+      } : 'No author',
+      isActive: ht.isActive,
+      responses: ht.responses.length,
+      createdAt: ht.createdAt,
+      isInitial: ht.isInitial
+    })));
+
+    res.json({
+      monicasUser: monicasUser ? {
+        id: monicasUser._id,
+        name: monicasUser.name,
+        email: monicasUser.email
+      } : null,
+      monicasHotTakes: monicasHotTakes.map(ht => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.author ? {
+          id: ht.author._id,
+          name: ht.author.name,
+          email: ht.author.email
+        } : 'No author',
+        isActive: ht.isActive,
+        responses: ht.responses.length,
+        createdAt: ht.createdAt,
+        isInitial: ht.isInitial
+      })),
+      specificHotTakes: specificHotTakes.map(ht => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.author ? {
+          id: ht.author._id,
+          name: ht.author.name,
+          email: ht.author.email
+        } : 'No author',
+        isActive: ht.isActive,
+        responses: ht.responses.length,
+        createdAt: ht.createdAt,
+        isInitial: ht.isInitial
+      })),
+      hotTakesWithMonicasName: hotTakesWithMonicasName.map(ht => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.author ? {
+          id: ht.author._id,
+          name: ht.author.name,
+          email: ht.author.email
+        } : 'No author',
+        isActive: ht.isActive,
+        responses: ht.responses.length,
+        createdAt: ht.createdAt,
+        isInitial: ht.isInitial
+      }))
+    });
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
+    res.status(500).json({ 
+      error: 'Error investigating Monica\'s hot takes',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
