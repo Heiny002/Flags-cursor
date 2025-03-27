@@ -8,13 +8,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface HotTake {
-  id: string;
+  _id: string;
   text: string;
   categories: string[];
-  author: {
-    name: string;
-  };
+  authorName: string;
   createdAt: string;
+  isInitial?: boolean;
+  hasResponded?: boolean;
+  isAuthor?: boolean;
+  userResponse?: boolean | null;
 }
 
 const agreementLevels = [
@@ -36,42 +38,54 @@ const Flags: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Move fetchHotTakes outside useEffect so it can be reused
   const fetchHotTakes = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      
-      // Validate the response data
-      const validHotTakes = response.data.filter((hotTake: any) => 
-        hotTake && 
-        hotTake._id && // Ensure we have a valid MongoDB ID
-        hotTake.text && 
-        hotTake.categories && 
-        hotTake.author && 
-        hotTake.author.name
-      ).map((hotTake: any) => ({
-        id: hotTake._id, // Map _id to id for frontend use
-        text: hotTake.text,
-        categories: hotTake.categories,
-        author: hotTake.author,
-        createdAt: hotTake.createdAt
-      }));
+      const data = response.data;
+      console.log('Raw response data:', data);
+
+      // Validate and filter hot takes
+      const validHotTakes = data.filter((hotTake: HotTake) => {
+        // Basic validation - ensure required fields exist
+        const isValid = hotTake._id && 
+                       hotTake.text && 
+                       Array.isArray(hotTake.categories) && 
+                       hotTake.categories.length > 0;
+
+        if (!isValid) {
+          console.log('Invalid hot take:', hotTake);
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log('Valid hot takes:', validHotTakes);
 
       if (validHotTakes.length === 0) {
+        console.log('No valid hot takes found in response');
         throw new Error('No valid hot takes available');
       }
 
-      setHotTakes(validHotTakes);
-    } catch (err: any) {
-      console.error('Error fetching hot takes:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch hot takes');
-    } finally {
+      // Sort hot takes: initial hot takes first, then by creation date
+      const sortedHotTakes = validHotTakes.sort((a: HotTake, b: HotTake) => {
+        // Put initial hot takes first
+        if (a.isInitial && !b.isInitial) return -1;
+        if (!a.isInitial && b.isInitial) return 1;
+        
+        // Then sort by creation date
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      setHotTakes(sortedHotTakes);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching hot takes:', error);
+      setError('Failed to load hot takes. Please try again later.');
       setLoading(false);
     }
   };
@@ -84,26 +98,26 @@ const Flags: React.FC = () => {
   }, [token]);
 
   const handleResponseChange = (value: number | null) => {
-    if (!currentHotTake?.id) return;
+    if (!currentHotTake?._id) return;
     setResponses(prev => ({
       ...prev,
-      [currentHotTake.id]: value
+      [currentHotTake._id]: value
     }));
   };
 
   const handleMatchChange = (value: [number, number] | null) => {
-    if (!currentHotTake?.id) return;
+    if (!currentHotTake?._id) return;
     setMatchRanges(prev => ({
       ...prev,
-      [currentHotTake.id]: value
+      [currentHotTake._id]: value
     }));
   };
 
   const handleDealbreakerChange = (checked: boolean) => {
-    if (!currentHotTake?.id) return;
+    if (!currentHotTake?._id) return;
     setDealbreakers(prev => ({
       ...prev,
-      [currentHotTake.id]: checked
+      [currentHotTake._id]: checked
     }));
   };
 
@@ -113,7 +127,7 @@ const Flags: React.FC = () => {
       console.log('Current hot take:', hotTakes[currentIndex]);
       
       // Store the current hot take ID
-      const currentHotTakeId = hotTakes[currentIndex].id;
+      const currentHotTakeId = hotTakes[currentIndex]._id;
       console.log('Current hot take ID:', currentHotTakeId);
       
       // First increment the index
@@ -221,7 +235,7 @@ const Flags: React.FC = () => {
   const currentHotTake = hotTakes[currentIndex];
   
   // Additional safety check
-  if (!currentHotTake || !currentHotTake.author) {
+  if (!currentHotTake) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Header />
@@ -245,20 +259,35 @@ const Flags: React.FC = () => {
         </Typography>
         <HotTakeCard
           title={currentHotTake.text}
-          category={currentHotTake.categories?.[0] || 'Uncategorized'} // Provide fallback
-          author={currentHotTake.author.name}
+          category={currentHotTake.categories?.[0] || 'Uncategorized'}
+          author={currentHotTake.authorName}
           onResponseChange={handleResponseChange}
           onMatchChange={handleMatchChange}
           onDealbreakerChange={handleDealbreakerChange}
           onNext={handleNext}
           onPrevious={handlePrevious}
           onSkip={handleSkip}
-          cardKey={currentHotTake.id}
+          cardKey={currentHotTake._id}
         />
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
             {currentIndex + 1} of {hotTakes.length}
           </Typography>
+          {currentHotTake.isInitial && (
+            <Typography variant="body2" color="primary">
+              (Initial Hot Take)
+            </Typography>
+          )}
+          {currentHotTake.hasResponded && (
+            <Typography variant="body2" color="success.main">
+              (You've responded)
+            </Typography>
+          )}
+          {currentHotTake.isAuthor && (
+            <Typography variant="body2" color="info.main">
+              (Your hot take)
+            </Typography>
+          )}
         </Box>
       </div>
       <FooterNav />

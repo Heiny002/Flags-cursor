@@ -2,69 +2,198 @@ import express from 'express';
 import HotTake from '../models/HotTake';
 import HotTakeResponse from '../models/HotTakeResponse';
 import { auth } from '../middleware/auth';
+import User, { IUser } from '../models/User';
+import { Request, Response } from 'express';
+import mongoose from 'mongoose';
+
+interface PopulatedAuthor {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  username?: string;
+}
+
+interface AuthRequest extends Request {
+  user?: IUser;
+}
 
 const router = express.Router();
 
-// Submit a new hot take
-router.post('/', auth, async (req, res) => {
+// Get hot takes for the current user
+router.get('/', auth, async (req: Request, res: Response) => {
   try {
     if (!req.user?._id) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const { text, categories } = req.body;
+    const userId = req.user._id;
+    console.log('Fetching hot takes for user:', userId);
 
-    // Validate required fields
-    if (!text || !categories || !Array.isArray(categories) || categories.length === 0) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
+    // Get all active hot takes (both regular and initial)
+    const hotTakes = await HotTake.find({ isActive: true })
+      .populate<{ author: PopulatedAuthor }>('author', 'username email')
+      .sort({ createdAt: -1 });
 
-    // Create the hot take
-    const hotTake = new HotTake({
-      text,
-      categories,
-      author: req.user._id,
-    });
+    console.log('Found active hot takes:', hotTakes.length);
 
-    // Save to database
-    const savedHotTake = await hotTake.save();
+    // Format the response to include author name and user's response status
+    const formattedHotTakes = hotTakes.map(hotTake => {
+      try {
+        // Handle cases where author might be null or invalid
+        const authorName = hotTake.author ? 
+          (hotTake.author.username || hotTake.author.email || 'Anonymous') : 
+          'Anonymous';
 
-    // Verify the save by fetching the document
-    const verifiedHotTake = await HotTake.findById(savedHotTake._id)
-      .populate('author', 'name');
+        const hasResponded = hotTake.responses.some(response => 
+          response.user.toString() === userId.toString()
+        );
+        
+        const isAuthor = hotTake.author ? 
+          hotTake.author._id.toString() === userId.toString() : 
+          false;
 
-    if (!verifiedHotTake) {
-      throw new Error('Failed to verify hot take storage');
-    }
-
-    // Return detailed verification response
-    res.status(201).json({
-      message: 'Hot take submitted and verified successfully',
-      hotTake: {
-        id: verifiedHotTake._id,
-        text: verifiedHotTake.text,
-        categories: verifiedHotTake.categories,
-        author: verifiedHotTake.author,
-        createdAt: verifiedHotTake.createdAt,
-        verified: true,
-      },
-      verification: {
-        stored: true,
-        timestamp: new Date().toISOString(),
-        documentId: verifiedHotTake._id,
+        return {
+          _id: hotTake._id,
+          text: hotTake.text,
+          categories: hotTake.categories,
+          createdAt: hotTake.createdAt,
+          authorName,
+          hasResponded,
+          isAuthor,
+          userResponse: hasResponded ? hotTake.responses.find(r => r.user.toString() === userId.toString())?.agree : null,
+          isInitial: hotTake.isInitial || false
+        };
+      } catch (error) {
+        console.error('Error formatting hot take:', hotTake._id, error);
+        // Return a basic version of the hot take if there's an error
+        return {
+          _id: hotTake._id,
+          text: hotTake.text,
+          categories: hotTake.categories,
+          createdAt: hotTake.createdAt,
+          authorName: 'Anonymous',
+          hasResponded: false,
+          isAuthor: false,
+          userResponse: null,
+          isInitial: hotTake.isInitial || false
+        };
       }
     });
+
+    console.log('Final formatted hot takes:', JSON.stringify(formattedHotTakes, null, 2));
+    res.json(formattedHotTakes);
   } catch (error) {
-    console.error('Error submitting hot take:', error);
+    console.error('Error fetching hot takes:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     res.status(500).json({ 
-      message: 'Error submitting hot take',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Error fetching hot takes',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
+// Create a new hot take
+router.post('/', auth, async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { text, categories, isInitial } = req.body;
+    const userId = req.user._id;
+
+    console.log('Creating hot take with data:', {
+      text,
+      categories,
+      isInitial,
+      userId,
+    });
+
+    // Validate required fields
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    // Create the hot take with proper error handling
+    const hotTake = new HotTake({
+      text: text.trim(),
+      categories: Array.isArray(categories) ? categories : ['No Category'],
+      author: userId,
+      isInitial: Boolean(isInitial),
+      isActive: true,
+    });
+
+    // Validate the document before saving
+    const validationError = hotTake.validateSync();
+    if (validationError) {
+      console.error('Validation error:', validationError);
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: validationError.errors 
+      });
+    }
+
+    // Save the hot take
+    const savedHotTake = await hotTake.save();
+    console.log('Hot take saved successfully:', savedHotTake);
+
+    res.status(201).json(savedHotTake);
+  } catch (error) {
+    console.error('Error creating hot take:', error);
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: error.errors 
+      });
+    }
+    res.status(500).json({ 
+      error: 'Error creating hot take',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Respond to a hot take
+router.post('/:id/respond', auth, async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { agree } = req.body;
+    const userId = req.user._id;
+    const hotTakeId = req.params.id;
+
+    const hotTake = await HotTake.findById(hotTakeId);
+    if (!hotTake) {
+      return res.status(404).json({ error: 'Hot take not found' });
+    }
+
+    // Check if user has already responded
+    const hasResponded = hotTake.responses.some(response => 
+      response.user.toString() === userId.toString()
+    );
+
+    if (hasResponded) {
+      return res.status(400).json({ error: 'User has already responded to this hot take' });
+    }
+
+    // Add response
+    hotTake.responses.push({
+      user: userId,
+      agree,
+      timestamp: new Date(),
+    });
+
+    await hotTake.save();
+    res.json(hotTake);
+  } catch (error) {
+    console.error('Error responding to hot take:', error);
+    res.status(500).json({ error: 'Error responding to hot take' });
+  }
+});
+
 // Get all hot takes (excluding user's own)
-router.get('/', auth, async (req, res) => {
+router.get('/all', auth, async (req, res) => {
   try {
     if (!req.user?._id) {
       return res.status(401).json({ message: 'User not authenticated' });

@@ -52,15 +52,17 @@ const Onboarding: React.FC = () => {
     
     if (currentStep.hasInput && hotTakeInput.trim()) {
       try {
-        // Save the hot take
+        // Save the hot take with isInitial flag
         await api.post('/hot-takes', {
-          content: hotTakeInput.trim(),
+          text: hotTakeInput.trim(),
+          categories: ['No Category'],
           isActive: true,
+          isInitial: true,
         });
-        setHotTakeInput(''); // Clear the input after saving
+        setHotTakeInput('');
       } catch (error) {
         console.error('Error saving hot take:', error);
-        return; // Don't proceed if saving fails
+        return;
       }
     }
 
@@ -89,19 +91,15 @@ const Onboarding: React.FC = () => {
     try {
       const updatedPages = [...pages];
       if (stepIndex === -1) {
-        // Updating page title
         updatedPages[pageIndex].title = value;
       } else {
-        // Updating step content
         updatedPages[pageIndex].steps[stepIndex][field] = value;
       }
       
-      // Save to backend
       const response = await api.post<OnboardingData>('/onboarding/content', { pages: updatedPages });
       setPages(response.data.pages);
     } catch (error) {
       console.error('Error saving onboarding content:', error);
-      // Revert changes on error
       fetchOnboardingContent();
     }
   };

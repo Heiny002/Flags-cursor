@@ -46,22 +46,16 @@ const HINTS = [
 ];
 
 interface VerificationResponse {
-  message: string;
-  hotTake: {
-    id: string;
-    text: string;
-    categories: string[];
-    author: {
-      name: string;
-    };
-    createdAt: string;
-    verified: boolean;
-  };
-  verification: {
-    stored: boolean;
-    timestamp: string;
-    documentId: string;
-  };
+  _id: string;
+  text: string;
+  categories: string[];
+  author: string;
+  createdAt: string;
+  isActive: boolean;
+  isInitial: boolean;
+  responses: any[];
+  updatedAt: string;
+  __v: number;
 }
 
 const HotTakeSubmission: React.FC = () => {
@@ -118,6 +112,7 @@ const HotTakeSubmission: React.FC = () => {
         {
           text: hotTake.trim(),
           categories: selectedCategories,
+          isInitial: false,
         },
         {
           headers: {
@@ -139,6 +134,8 @@ const HotTakeSubmission: React.FC = () => {
     } catch (err: any) {
       console.error('Error submitting hot take:', err);
       console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      console.error('Error headers:', err.response?.headers);
       
       let errorMessage = 'Failed to submit hot take. Please try again.';
       
@@ -249,12 +246,12 @@ const HotTakeSubmission: React.FC = () => {
         >
           {verification ? (
             <Box>
-              <Typography variant="subtitle2">Hot take submitted and verified!</Typography>
+              <Typography variant="subtitle2">Hot take submitted successfully!</Typography>
               <Typography variant="caption" display="block">
-                ID: {verification.hotTake.id}
+                ID: {verification._id}
               </Typography>
               <Typography variant="caption" display="block">
-                Stored at: {new Date(verification.verification.timestamp).toLocaleString()}
+                Created at: {new Date(verification.createdAt).toLocaleString()}
               </Typography>
             </Box>
           ) : (

@@ -6,41 +6,64 @@ export interface IHotTake extends mongoose.Document {
   author: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  isInitial: boolean;
+  category: string;
+  isActive: boolean;
+  responses: {
+    user: mongoose.Types.ObjectId;
+    agree: boolean;
+    timestamp: Date;
+  }[];
 }
 
 const hotTakeSchema = new mongoose.Schema({
   text: {
     type: String,
-    required: true,
+    required: [true, 'Text is required'],
     trim: true,
-    maxLength: 500,
   },
-  categories: [{
-    type: String,
-    required: true,
-    enum: [
-      'Lifestyle & Habits',
-      'Cultural & Entertainment',
-      'Ethical & Moral Beliefs',
-      'Social & Political Views',
-      'Relationship Dynamics',
-      'Career & Education',
-      'Travel & Adventure',
-      'Food & Cuisine',
-      'After Dark',
-      'Local',
-    ],
-  }],
+  categories: {
+    type: [String],
+    required: [true, 'At least one category is required'],
+    default: ['No Category'],
+  },
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: [true, 'Author is required'],
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  isInitial: {
+    type: Boolean,
+    default: false,
+  },
+  responses: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    agree: {
+      type: Boolean,
+      required: true,
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
 }, {
   timestamps: true,
 });
 
-// Index for efficient querying
-hotTakeSchema.index({ categories: 1, createdAt: -1 });
+// Add indexes for better query performance
+hotTakeSchema.index({ author: 1, createdAt: -1 });
+hotTakeSchema.index({ isActive: 1, createdAt: -1 });
+hotTakeSchema.index({ categories: 1 });
 
-export default mongoose.model<IHotTake>('HotTake', hotTakeSchema); 
+const HotTake = mongoose.model('HotTake', hotTakeSchema);
+
+export default HotTake; 
