@@ -12,6 +12,7 @@ import Onboarding from './pages/Onboarding';
 import Layout from './components/Layout';
 import { useState } from 'react';
 import './styles/design-system.css';
+import Admin from './pages/Admin';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -89,6 +90,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
                 </ProtectedRoute>
               }
             />

@@ -283,22 +283,25 @@ const Profile: React.FC = () => {
                     }}
                   >
                     <ListItemText
-                      primary={hotTake.text}
-                      secondary={
-                        <React.Fragment>
-                          <Typography component="span" variant="body2" color="text.primary">
-                            {formatDate(hotTake.createdAt)}
+                      primary={
+                        <div className="flex flex-wrap gap-1">
+                          <Typography variant="body1" component="span">
+                            {hotTake.text}
                           </Typography>
-                          <br />
-                          {hotTake.categories.map((category) => (
+                          {hotTake.categories && hotTake.categories.length > 0 && (
                             <Chip
-                              key={category}
-                              label={category}
+                              label={hotTake.categories[0]}
                               size="small"
-                              sx={{ mr: 0.5, mt: 0.5 }}
+                              color="primary"
+                              variant="outlined"
                             />
-                          ))}
-                        </React.Fragment>
+                          )}
+                        </div>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(hotTake.createdAt).toLocaleDateString()}
+                        </Typography>
                       }
                     />
                   </ListItem>

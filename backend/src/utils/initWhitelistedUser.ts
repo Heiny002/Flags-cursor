@@ -9,30 +9,34 @@ export const initWhitelistedUser = async () => {
     const whitelistedPassword = 'Fl4gs_App!';
     const whitelistedName = 'Jim Heiniger';
 
-    // Delete existing whitelisted user if exists
-    await User.deleteOne({ email: whitelistedEmail });
+    // Check if whitelisted user exists
+    const existingUser = await User.findOne({ email: whitelistedEmail });
     
-    // Create new whitelisted user with direct password (will be hashed by pre-save hook)
-    const user = new User({
-      email: whitelistedEmail,
-      password: whitelistedPassword, // This will be hashed by the pre-save hook
-      name: whitelistedName,
-      hasCompletedInitialQuestionnaire: true
-    });
-
-    await user.save();
-    console.log('Whitelisted user recreated');
-
-    // Create a sample hot take for the user
-    const existingHotTake = await HotTake.findOne({ text: 'Chicago is the greatest city in the US' });
-    if (!existingHotTake) {
-      const sampleHotTake = new HotTake({
-        text: 'Chicago is the greatest city in the US',
-        categories: ['Travel & Adventure'],
-        author: user._id,
+    if (!existingUser) {
+      // Create new whitelisted user with direct password (will be hashed by pre-save hook)
+      const user = new User({
+        email: whitelistedEmail,
+        password: whitelistedPassword, // This will be hashed by the pre-save hook
+        name: whitelistedName,
+        hasCompletedInitialQuestionnaire: true
       });
-      await sampleHotTake.save();
-      console.log('Sample hot take created');
+
+      await user.save();
+      console.log('Whitelisted user created');
+
+      // Create a sample hot take for the user
+      const existingHotTake = await HotTake.findOne({ text: 'Chicago is the greatest city in the US' });
+      if (!existingHotTake) {
+        const sampleHotTake = new HotTake({
+          text: 'Chicago is the greatest city in the US',
+          categories: ['Travel & Adventure'],
+          author: user._id,
+        });
+        await sampleHotTake.save();
+        console.log('Sample hot take created');
+      }
+    } else {
+      console.log('Whitelisted user already exists');
     }
 
     // Verify the password works

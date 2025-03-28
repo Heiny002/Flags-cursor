@@ -40,13 +40,26 @@ const Flags: React.FC = () => {
 
   const fetchHotTakes = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
         headers: {
           Authorization: `Bearer ${token}`
+        },
+        params: {
+          limit: 100,  // Request more hot takes
+          offset: 0
         }
       });
       const data = response.data;
-      console.log('Raw response data:', data);
+      console.log('Received hot takes:', data.length);
+      console.log('Sample of received hot takes:', data.slice(0, 3).map((ht: HotTake) => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.authorName,
+        categories: ht.categories
+      })));
 
       // Validate and filter hot takes
       const validHotTakes = data.filter((hotTake: HotTake) => {
@@ -54,34 +67,60 @@ const Flags: React.FC = () => {
         const isValid = hotTake._id && 
                        hotTake.text && 
                        Array.isArray(hotTake.categories) && 
-                       hotTake.categories.length > 0;
+                       hotTake.categories.length > 0 &&
+                       hotTake.authorName;
 
         if (!isValid) {
-          console.log('Invalid hot take:', hotTake);
+          console.warn('Invalid hot take:', {
+            id: hotTake._id,
+            text: hotTake.text,
+            hasCategories: Array.isArray(hotTake.categories),
+            categoriesLength: hotTake.categories?.length,
+            hasAuthorName: !!hotTake.authorName
+          });
           return false;
         }
 
         return true;
       });
 
-      console.log('Valid hot takes:', validHotTakes);
+      console.log('Valid hot takes:', validHotTakes.length);
+      console.log('Initial hot takes:', validHotTakes.filter((ht: HotTake) => ht.isInitial).length);
+      console.log('Sample of valid hot takes:', validHotTakes.slice(0, 3).map((ht: HotTake) => ({
+        id: ht._id,
+        text: ht.text,
+        author: ht.authorName,
+        categories: ht.categories
+      })));
 
       if (validHotTakes.length === 0) {
         console.log('No valid hot takes found in response');
-        throw new Error('No valid hot takes available');
+        setError('No new hot takes available at the moment. Check back later!');
+        setHotTakes([]);
+      } else {
+        // Sort hot takes: initial hot takes first, then by creation date
+        const sortedHotTakes = validHotTakes.sort((a: HotTake, b: HotTake) => {
+          // Put initial hot takes first
+          if (a.isInitial && !b.isInitial) return -1;
+          if (!a.isInitial && b.isInitial) return 1;
+          
+          // Then sort by creation date
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        console.log('Sorted hot takes:', sortedHotTakes.length);
+        console.log('Sample of sorted hot takes:', sortedHotTakes.slice(0, 3).map((ht: HotTake) => ({
+          id: ht._id,
+          text: ht.text,
+          author: ht.authorName,
+          categories: ht.categories,
+          isInitial: ht.isInitial,
+          createdAt: ht.createdAt
+        })));
+
+        setHotTakes(sortedHotTakes);
+        setError(null);
       }
-
-      // Sort hot takes: initial hot takes first, then by creation date
-      const sortedHotTakes = validHotTakes.sort((a: HotTake, b: HotTake) => {
-        // Put initial hot takes first
-        if (a.isInitial && !b.isInitial) return -1;
-        if (!a.isInitial && b.isInitial) return 1;
-        
-        // Then sort by creation date
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-
-      setHotTakes(sortedHotTakes);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching hot takes:', error);

@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Button, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Button, IconButton, Menu, MenuItem, Typography, ListItemIcon, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FiLogOut } from 'react-icons/fi';
 import { FiMenu } from 'react-icons/fi';
+import PersonIcon from '@mui/icons-material/Person';
+import AddIcon from '@mui/icons-material/Add';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -100,6 +103,25 @@ const Header: React.FC = () => {
         <MenuItem onClick={handleOnboarding}>
           <Typography>Onboarding</Typography>
         </MenuItem>
+        <MenuItem onClick={() => navigate('/profile')}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          Profile
+        </MenuItem>
+        <MenuItem onClick={() => navigate('/hot-takes')}>
+          <ListItemIcon>
+            <AddIcon fontSize="small" />
+          </ListItemIcon>
+          Submit Hot Take
+        </MenuItem>
+        <MenuItem onClick={() => navigate('/admin')}>
+          <ListItemIcon>
+            <AdminPanelSettingsIcon fontSize="small" />
+          </ListItemIcon>
+          Admin Panel
+        </MenuItem>
+        <Divider />
       </Menu>
     </Box>
   );

@@ -7,7 +7,6 @@ export interface IHotTake extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   isInitial: boolean;
-  category: string;
   isActive: boolean;
   responses: {
     user: mongoose.Types.ObjectId;

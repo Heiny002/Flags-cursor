@@ -18,6 +18,14 @@ export interface IUser extends mongoose.Document {
   hotTake?: string;
   importantCategories?: string[];
   hasCompletedInitialQuestionnaire: boolean;
+  isAdmin?: boolean;
+  profile?: {
+    age?: number;
+    gender?: string;
+    bio?: string;
+    location?: string;
+    interests?: string[];
+  };
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -71,6 +79,17 @@ const userSchema = new mongoose.Schema({
   hasCompletedInitialQuestionnaire: {
     type: Boolean,
     default: false,
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
+  profile: {
+    age: Number,
+    gender: String,
+    bio: String,
+    location: String,
+    interests: [String],
   },
 }, {
   timestamps: true,
