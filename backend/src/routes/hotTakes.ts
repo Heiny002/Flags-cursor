@@ -159,86 +159,38 @@ router.post('/', auth, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const { text, categories, isInitial } = req.body;
-    const userId = req.user._id;
+    const { text, categories } = req.body;
 
-    console.log('Creating hot take with data:', {
+    // Check for duplicates
+    const normalizedText = text.toLowerCase().trim();
+    const existingHotTake = await HotTake.findOne({ 
+      text: { $regex: new RegExp(`^${normalizedText}$`, 'i') }
+    });
+
+    if (existingHotTake) {
+      return res.status(400).json({ 
+        error: 'A similar hot take already exists',
+        existingHotTake: {
+          text: existingHotTake.text,
+          categories: existingHotTake.categories,
+          createdAt: existingHotTake.createdAt
+        }
+      });
+    }
+
+    const hotTake = new HotTake({
       text,
       categories,
-      isInitial,
-      userId,
-    });
-
-    // Validate required fields
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
-    }
-
-    // Create the hot take with proper error handling
-    const hotTake = new HotTake({
-      text: text.trim(),
-      categories: Array.isArray(categories) ? categories : ['No Category'],
-      author: userId,
-      isInitial: Boolean(isInitial),
+      author: req.user._id,
       isActive: true,
+      isInitial: false
     });
 
-    // Log the hot take before saving
-    console.log('Creating hot take:', {
-      text: hotTake.text,
-      categories: hotTake.categories,
-      author: userId,
-      isInitial: hotTake.isInitial,
-      isActive: hotTake.isActive
-    });
-
-    // Validate the document before saving
-    const validationError = hotTake.validateSync();
-    if (validationError) {
-      console.error('Validation error:', validationError);
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: validationError.errors 
-      });
-    }
-
-    // Save the hot take
-    const savedHotTake = await hotTake.save();
-    
-    // Populate the author information after saving
-    const populatedHotTake = await HotTake.findById(savedHotTake._id)
-      .populate<{ author: PopulatedAuthor }>('author', 'name email');
-    
-    if (!populatedHotTake) {
-      console.error('Failed to populate hot take after saving');
-      return res.status(500).json({ error: 'Failed to save hot take' });
-    }
-    
-    console.log('Hot take saved successfully:', {
-      id: populatedHotTake._id,
-      text: populatedHotTake.text,
-      author: populatedHotTake.author ? {
-        id: populatedHotTake.author._id,
-        name: populatedHotTake.author.name,
-        email: populatedHotTake.author.email
-      } : 'No author',
-      isActive: populatedHotTake.isActive,
-      isInitial: populatedHotTake.isInitial
-    });
-
-    res.status(201).json(populatedHotTake);
+    await hotTake.save();
+    res.status(201).json(hotTake);
   } catch (error) {
     console.error('Error creating hot take:', error);
-    if (error instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({ 
-        error: 'Validation error',
-        details: error.errors 
-      });
-    }
-    res.status(500).json({ 
-      error: 'Error creating hot take',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    res.status(500).json({ error: 'Error creating hot take' });
   }
 });
 

@@ -4,7 +4,21 @@ import { IHotTakeResponse } from '../models/HotTakeResponse';
 import { IUser } from '../models/User';
 import { ObjectId } from 'mongodb';
 
-export const mainArray = [
+// Function to deduplicate hottakes based on text content
+function deduplicateHotTakes(hotTakes: any[]): any[] {
+  const seen = new Set<string>();
+  return hotTakes.filter(hotTake => {
+    const text = hotTake.text.toLowerCase().trim();
+    if (seen.has(text)) {
+      return false;
+    }
+    seen.add(text);
+    return true;
+  });
+}
+
+// Deduplicate the main array
+export const mainArray = deduplicateHotTakes([
   {
     text: "Spicy food is yucky",
     categories: ["Food & Cuisine"],
@@ -1058,4 +1072,4 @@ export const mainArray = [
     createdAt: new Date("2025-03-25T00:16:00.000Z"),
     isInitial: false
   }
-]; 
+]); 
