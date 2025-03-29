@@ -17,6 +17,8 @@ interface HotTakeCardProps {
   cardKey: string;
   disableAutoFlip?: boolean;
   hideSkip?: boolean;
+  startFlipped?: boolean;
+  hideFlip?: boolean;
 }
 
 interface VisibilityState {
@@ -47,8 +49,10 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   cardKey,
   disableAutoFlip = false,
   hideSkip = false,
+  startFlipped = false,
+  hideFlip = false,
 }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(startFlipped);
   const [response, setResponse] = useState<number | null>(null);
   const [matchResponse, setMatchResponse] = useState<[number, number] | null>(null);
   const [isDealbreaker, setIsDealbreaker] = useState(false);
@@ -67,17 +71,17 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
     backResponse: true,
     backSlider: true,
     dealbreaker: true,
-    flipButton: true,
+    flipButton: !hideFlip,
   });
 
   // Reset state when cardKey changes
   React.useEffect(() => {
-    setIsFlipped(false);
+    setIsFlipped(startFlipped);
     setResponse(null);
     setMatchResponse(null);
     setIsDealbreaker(false);
     setIsSelectingRange(false);
-  }, [cardKey]);
+  }, [cardKey, startFlipped]);
 
   const handleResponseChange = (value: number) => {
     setResponse(value);

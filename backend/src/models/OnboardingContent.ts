@@ -7,6 +7,7 @@ const stepSchema = new mongoose.Schema({
   inputType: { type: String },
   inputPlaceholder: { type: String },
   hasSampleCard: { type: Boolean, default: false },
+  hasSampleCardBack: { type: Boolean, default: false },
   sampleHotTake: {
     text: { type: String },
     categories: [{ type: String }],

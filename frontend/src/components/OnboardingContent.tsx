@@ -11,6 +11,7 @@ interface Step {
   inputType?: string;
   inputPlaceholder?: string;
   hasSampleCard?: boolean;
+  hasSampleCardBack?: boolean;
   sampleHotTake?: {
     text: string;
     categories: string[];
@@ -174,6 +175,33 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
                     cardKey="sample-card"
                     disableAutoFlip={true}
                     hideSkip={true}
+                    hideFlip={true}
+                  />
+                </Box>
+              )}
+
+              {step.hasSampleCardBack && index === activeStep && (
+                <Box sx={{ mb: 3, mt: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Set Your Match Preferences:
+                  </Typography>
+                  <HotTakeCard
+                    title={step.sampleHotTake?.text || ''}
+                    category={step.sampleHotTake?.categories?.[0] || ''}
+                    author={`by ${step.sampleHotTake?.authorName || ''}`}
+                    onResponseChange={() => {}}
+                    onMatchChange={(range) => {
+                      setSampleRating(range ? 1 : null);
+                    }}
+                    onDealbreakerChange={() => {}}
+                    onNext={() => {}}
+                    onPrevious={() => {}}
+                    onSkip={() => {}}
+                    cardKey="sample-card-back"
+                    disableAutoFlip={true}
+                    hideSkip={true}
+                    startFlipped={true}
+                    hideFlip={true}
                   />
                 </Box>
               )}

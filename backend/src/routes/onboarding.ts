@@ -27,6 +27,16 @@ const defaultContent = {
           }
         },
         {
+          label: 'Rate Hot Takes',
+          description: 'Rate hot takes to find your matches. The more you rate, the better your matches will be!',
+          hasSampleCardBack: true,
+          sampleHotTake: {
+            text: "Dogs deserve restaurant access more than children",
+            categories: ["Social & Political Views", "Food & Cuisine"],
+            authorName: "Riley"
+          }
+        },
+        {
           label: 'Getting Started',
           description: 'Complete your profile, share your hot takes, and start connecting with like-minded individuals.',
         },
