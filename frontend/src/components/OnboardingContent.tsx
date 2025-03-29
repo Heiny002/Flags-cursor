@@ -1,8 +1,20 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, Stepper, Step, StepLabel, StepContent, Button, TextField, Typography, Paper, Divider } from '@mui/material';
 import EditableText from './EditableText';
 import { Rating } from '@mui/material';
 import HotTakeCard from './HotTakeCard';
+import CardWalkthrough from './CardWalkthrough';
+
+interface WalkthroughStep {
+  element: string;
+  description: string;
+  position: {
+    top?: string | number;
+    bottom?: string | number;
+    left?: string | number;
+    right?: string | number;
+  };
+}
 
 interface Step {
   label: string;
@@ -17,6 +29,7 @@ interface Step {
     categories: string[];
     authorName: string;
   };
+  walkthrough?: WalkthroughStep[];
 }
 
 interface Page {
@@ -49,6 +62,87 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
   userEmail,
   canBypassValidation,
 }) => {
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Array<WalkthroughStep & { highlightArea: any }>>([]);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Show walkthrough when step 2 is active and has walkthrough steps
+    const currentStep = pages[activePage]?.steps[activeStep];
+    if (currentStep?.walkthrough && Array.isArray(currentStep.walkthrough) && currentStep.hasSampleCard) {
+      // Wait for card to render before calculating positions
+      setTimeout(() => {
+        const card = cardRef.current;
+        if (card) {
+          const cardRect = card.getBoundingClientRect();
+          const hotTakeElement = card.querySelector('h5');
+          const categoryElement = card.querySelector('h6');
+          const authorElement = card.querySelector('caption');
+          const flagsElement = card.querySelector('[role="radiogroup"]');
+
+          const updatedSteps = currentStep.walkthrough.map(step => {
+            let highlightArea = { top: 0, left: 0, width: 0, height: 0 };
+
+            switch (step.element) {
+              case 'hot-take':
+                if (hotTakeElement) {
+                  const rect = hotTakeElement.getBoundingClientRect();
+                  highlightArea = {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  };
+                }
+                break;
+              case 'category':
+                if (categoryElement) {
+                  const rect = categoryElement.getBoundingClientRect();
+                  highlightArea = {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  };
+                }
+                break;
+              case 'author':
+                if (authorElement) {
+                  const rect = authorElement.getBoundingClientRect();
+                  highlightArea = {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  };
+                }
+                break;
+              case 'flags':
+                if (flagsElement) {
+                  const rect = flagsElement.getBoundingClientRect();
+                  highlightArea = {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  };
+                }
+                break;
+            }
+
+            return {
+              ...step,
+              highlightArea
+            };
+          });
+
+          setWalkthroughSteps(updatedSteps);
+          setShowWalkthrough(true);
+        }
+      }, 500);
+    }
+  }, [activePage, activeStep, pages]);
+
   if (!pages || pages.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -156,7 +250,7 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
               )}
 
               {step.hasSampleCard && index === activeStep && (
-                <Box sx={{ mb: 3, mt: 4 }}>
+                <Box sx={{ mb: 3, mt: 4 }} ref={cardRef}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
                     Try Rating This Hot Take:
                   </Typography>
@@ -177,6 +271,12 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
                     hideSkip={true}
                     hideFlip={true}
                   />
+                  {showWalkthrough && walkthroughSteps.length > 0 && (
+                    <CardWalkthrough
+                      steps={walkthroughSteps}
+                      onComplete={() => setShowWalkthrough(false)}
+                    />
+                  )}
                 </Box>
               )}
 

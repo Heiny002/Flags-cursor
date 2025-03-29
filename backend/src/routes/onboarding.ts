@@ -24,7 +24,41 @@ const defaultContent = {
             text: "Dogs deserve restaurant access more than children",
             categories: ["Social & Political Views", "Food & Cuisine"],
             authorName: "Riley"
-          }
+          },
+          walkthrough: [
+            {
+              element: "hot-take",
+              description: "At the top of each card is the Hot Take",
+              position: {
+                bottom: "60%",
+                left: "50%"
+              }
+            },
+            {
+              element: "category",
+              description: "Beneath the Hot Take is the category/categories the Hot Take falls into",
+              position: {
+                bottom: "40%",
+                left: "50%"
+              }
+            },
+            {
+              element: "author",
+              description: "Below the category is the author of the Hot Take",
+              position: {
+                bottom: "30%",
+                left: "50%"
+              }
+            },
+            {
+              element: "flags",
+              description: "The 5 flags are options for your response to the Hot Take",
+              position: {
+                top: "70%",
+                left: "50%"
+              }
+            }
+          ]
         },
         {
           label: 'Rate Hot Takes',

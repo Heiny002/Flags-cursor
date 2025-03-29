@@ -1,5 +1,16 @@
 import mongoose from 'mongoose';
 
+const walkthroughStepSchema = new mongoose.Schema({
+  element: { type: String, required: true },
+  description: { type: String, required: true },
+  position: {
+    top: { type: mongoose.Schema.Types.Mixed },
+    bottom: { type: mongoose.Schema.Types.Mixed },
+    left: { type: mongoose.Schema.Types.Mixed },
+    right: { type: mongoose.Schema.Types.Mixed }
+  }
+});
+
 const stepSchema = new mongoose.Schema({
   label: { type: String, required: true },
   description: { type: String, required: true },
@@ -12,7 +23,8 @@ const stepSchema = new mongoose.Schema({
     text: { type: String },
     categories: [{ type: String }],
     authorName: { type: String }
-  }
+  },
+  walkthrough: [walkthroughStepSchema]
 });
 
 const pageSchema = new mongoose.Schema({
