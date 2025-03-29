@@ -1,6 +1,8 @@
 import React from 'react';
-import { Box, Stepper, Step, StepLabel, StepContent, Button, TextField, Typography } from '@mui/material';
+import { Box, Stepper, Step, StepLabel, StepContent, Button, TextField, Typography, Paper, Divider } from '@mui/material';
 import EditableText from './EditableText';
+import { Rating } from '@mui/material';
+import HotTakeCard from './HotTakeCard';
 
 interface Step {
   label: string;
@@ -8,6 +10,12 @@ interface Step {
   hasInput?: boolean;
   inputType?: string;
   inputPlaceholder?: string;
+  hasSampleCard?: boolean;
+  sampleHotTake?: {
+    text: string;
+    categories: string[];
+    authorName: string;
+  };
 }
 
 interface Page {
@@ -24,6 +32,8 @@ interface OnboardingContentProps {
   onSaveText: (pageIndex: number, stepIndex: number, field: 'label' | 'description', newText: string) => void;
   hotTakeInput: string;
   setHotTakeInput: (value: string) => void;
+  userEmail?: string;
+  canBypassValidation: boolean;
 }
 
 const OnboardingContent: React.FC<OnboardingContentProps> = ({
@@ -35,15 +45,61 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
   onSaveText,
   hotTakeInput,
   setHotTakeInput,
+  userEmail,
+  canBypassValidation,
 }) => {
+  if (!pages || pages.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Loading onboarding content...
+        </Typography>
+      </Box>
+    );
+  }
+
   const currentPage = pages[activePage];
+  if (!currentPage) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Invalid page content
+        </Typography>
+      </Box>
+    );
+  }
+
   const currentStep = currentPage.steps[activeStep];
+  if (!currentStep) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Invalid step content
+        </Typography>
+      </Box>
+    );
+  }
+
+  const [sampleRating, setSampleRating] = React.useState<number | null>(null);
 
   const handleNext = () => {
+    // Skip validation for admin user
+    if (canBypassValidation) {
+      onNext();
+      return;
+    }
+
     if (currentStep.hasInput && !hotTakeInput.trim()) {
       return; // Don't proceed if input is required but empty
     }
+    if (currentStep.hasSampleCard && !sampleRating) {
+      return; // Don't proceed if sample card rating is required but not selected
+    }
     onNext();
+  };
+
+  const handleSampleRatingChange = (event: React.SyntheticEvent, value: number | null) => {
+    setSampleRating(value);
   };
 
   return (
@@ -90,7 +146,7 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
                     sx={{ 
                       mb: 2,
                       '& .MuiInputBase-input::placeholder': {
-                        fontSize: '0.875rem', // 14px
+                        fontSize: '0.875rem',
                         lineHeight: 1.5,
                       },
                     }}
@@ -98,14 +154,41 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
                 </Box>
               )}
 
-              <Box sx={{ mb: 2 }}>
+              {step.hasSampleCard && index === activeStep && (
+                <Box sx={{ mb: 3, mt: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Try Rating This Hot Take:
+                  </Typography>
+                  <HotTakeCard
+                    title={step.sampleHotTake?.text || ''}
+                    category={step.sampleHotTake?.categories?.[0] || ''}
+                    author={`by ${step.sampleHotTake?.authorName || ''}`}
+                    onResponseChange={(value) => {
+                      setSampleRating(value);
+                    }}
+                    onMatchChange={() => {}}
+                    onDealbreakerChange={() => {}}
+                    onNext={() => {}}
+                    onPrevious={() => {}}
+                    onSkip={() => {}}
+                    cardKey="sample-card"
+                    disableAutoFlip={true}
+                    hideSkip={true}
+                  />
+                </Box>
+              )}
+
+              <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
                   onClick={handleNext}
-                  sx={{ mt: 1, mr: 1 }}
+                  sx={{ mt: 1 }}
                   disabled={
                     (index === currentPage.steps.length - 1 && activePage === pages.length - 1) ||
-                    (step.hasInput && !hotTakeInput.trim())
+                    (!canBypassValidation && (
+                      (step.hasInput && !hotTakeInput.trim()) ||
+                      (step.hasSampleCard && !sampleRating)
+                    ))
                   }
                 >
                   {index === currentPage.steps.length - 1 && activePage === pages.length - 1
@@ -115,7 +198,7 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
                 <Button
                   disabled={index === 0 && activePage === 0}
                   onClick={onBack}
-                  sx={{ mt: 1, mr: 1 }}
+                  sx={{ mt: 1 }}
                 >
                   Back
                 </Button>

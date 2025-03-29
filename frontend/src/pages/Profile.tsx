@@ -62,7 +62,7 @@ const Profile: React.FC = () => {
       setLoadingHotTakes(true);
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/hot-takes/my-hot-takes`,
+          `${import.meta.env.VITE_API_URL}/api/hot-takes/my-hot-takes`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }

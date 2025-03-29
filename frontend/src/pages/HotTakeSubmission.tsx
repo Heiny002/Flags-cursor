@@ -101,14 +101,14 @@ const HotTakeSubmission: React.FC = () => {
     }
 
     try {
-      console.log('Submitting hot take to:', `${import.meta.env.VITE_API_URL}/hot-takes`);
+      console.log('Submitting hot take to:', `${import.meta.env.VITE_API_URL}/api/hot-takes`);
       console.log('With data:', {
         text: hotTake.trim(),
         categories: selectedCategories,
       });
 
       const response = await axios.post<VerificationResponse>(
-        `${import.meta.env.VITE_API_URL}/hot-takes`,
+        `${import.meta.env.VITE_API_URL}/api/hot-takes`,
         {
           text: hotTake.trim(),
           categories: selectedCategories,

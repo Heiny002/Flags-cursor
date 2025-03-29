@@ -15,6 +15,8 @@ interface HotTakeCardProps {
   onPrevious: () => void;
   onSkip: () => void;
   cardKey: string;
+  disableAutoFlip?: boolean;
+  hideSkip?: boolean;
 }
 
 interface VisibilityState {
@@ -43,6 +45,8 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   onPrevious,
   onSkip,
   cardKey,
+  disableAutoFlip = false,
+  hideSkip = false,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [response, setResponse] = useState<number | null>(null);
@@ -78,8 +82,8 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
   const handleResponseChange = (value: number) => {
     setResponse(value);
     onResponseChange(value);
-    // Auto-flip to back when a response is selected with a 1-second delay
-    if (value !== 0) {
+    // Only auto-flip if not disabled
+    if (!disableAutoFlip && value !== 0) {
       setTimeout(() => {
         setIsFlipped(true);
       }, 500);
@@ -354,19 +358,21 @@ const HotTakeCard: React.FC<HotTakeCardProps> = ({
       </Paper>
       
       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
-        <Button
-          variant="text"
-          onClick={onSkip}
-          sx={{
-            color: 'gray.600',
-            '&:hover': {
-              backgroundColor: 'transparent',
-              color: 'gray.900',
-            },
-          }}
-        >
-          Skip
-        </Button>
+        {!hideSkip && (
+          <Button
+            variant="text"
+            onClick={onSkip}
+            sx={{
+              color: 'gray.600',
+              '&:hover': {
+                backgroundColor: 'transparent',
+                color: 'gray.900',
+              },
+            }}
+          >
+            Skip
+          </Button>
+        )}
         {canProceed && (
           <Button
             variant="contained"

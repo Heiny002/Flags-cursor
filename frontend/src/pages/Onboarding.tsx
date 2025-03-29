@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import OnboardingContent from '../components/OnboardingContent';
 import FooterNav from '../components/FooterNav';
 import { api } from '../utils/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Step {
   label: string;
@@ -26,19 +27,32 @@ interface OnboardingData {
 
 const Onboarding: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [pages, setPages] = useState<Page[]>([]);
   const [activePage, setActivePage] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hotTakeInput, setHotTakeInput] = useState('');
+  const [canBypassValidation, setCanBypassValidation] = useState(false);
 
   useEffect(() => {
     fetchOnboardingContent();
+    checkBypassStatus();
   }, []);
+
+  const checkBypassStatus = async () => {
+    try {
+      const response = await api.get<{ canBypass: boolean }>('/api/onboarding/can-bypass-validation');
+      setCanBypassValidation(response.data.canBypass);
+    } catch (error) {
+      console.error('Error checking bypass status:', error);
+      setCanBypassValidation(false);
+    }
+  };
 
   const fetchOnboardingContent = async () => {
     try {
-      const response = await api.get<OnboardingData>('/onboarding/content');
+      const response = await api.get<OnboardingData>('/api/onboarding/content');
       setPages(response.data.pages);
       setLoading(false);
     } catch (error) {
@@ -50,19 +64,22 @@ const Onboarding: React.FC = () => {
   const handleNext = async () => {
     const currentStep = pages[activePage].steps[activeStep];
     
-    if (currentStep.hasInput && hotTakeInput.trim()) {
-      try {
-        // Save the hot take with isInitial flag
-        await api.post('/hot-takes', {
-          text: hotTakeInput.trim(),
-          categories: ['No Category'],
-          isActive: true,
-          isInitial: true,
-        });
-        setHotTakeInput('');
-      } catch (error) {
-        console.error('Error saving hot take:', error);
-        return;
+    // Skip validation for admin users
+    if (!canBypassValidation) {
+      if (currentStep.hasInput && hotTakeInput.trim()) {
+        try {
+          // Save the hot take with isInitial flag
+          await api.post('/hot-takes', {
+            text: hotTakeInput.trim(),
+            categories: ['No Category'],
+            isActive: true,
+            isInitial: true,
+          });
+          setHotTakeInput('');
+        } catch (error) {
+          console.error('Error saving hot take:', error);
+          return;
+        }
       }
     }
 
@@ -116,7 +133,7 @@ const Onboarding: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 3, mb: 3, position: 'relative' }}>
         <IconButton
           onClick={handleClose}
@@ -142,6 +159,8 @@ const Onboarding: React.FC = () => {
           onSaveText={handleSaveText}
           hotTakeInput={hotTakeInput}
           setHotTakeInput={setHotTakeInput}
+          userEmail={user?.email}
+          canBypassValidation={canBypassValidation}
         />
       </Paper>
 

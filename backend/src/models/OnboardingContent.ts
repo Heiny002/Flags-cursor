@@ -6,6 +6,12 @@ const stepSchema = new mongoose.Schema({
   hasInput: { type: Boolean, default: false },
   inputType: { type: String },
   inputPlaceholder: { type: String },
+  hasSampleCard: { type: Boolean, default: false },
+  sampleHotTake: {
+    text: { type: String },
+    categories: [{ type: String }],
+    authorName: { type: String }
+  }
 });
 
 const pageSchema = new mongoose.Schema({

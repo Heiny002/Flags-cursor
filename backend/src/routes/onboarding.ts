@@ -19,6 +19,12 @@ const defaultContent = {
         {
           label: 'How it Works',
           description: 'Share your opinions on various topics, and we\'ll match you with people who share similar views.',
+          hasSampleCard: true,
+          sampleHotTake: {
+            text: "Dogs deserve restaurant access more than children",
+            categories: ["Social & Political Views", "Food & Cuisine"],
+            authorName: "Riley"
+          }
         },
         {
           label: 'Getting Started',
@@ -32,23 +38,15 @@ const defaultContent = {
 // Get onboarding content
 router.get('/content', auth, async (req, res) => {
   try {
-    // Try to get existing content
-    let content = await OnboardingContent.findOne();
-
-    // If no content exists, create default content
-    if (!content) {
-      content = await OnboardingContent.create(defaultContent);
-    } else {
-      // Update existing content to ensure it has the latest text
-      content = await OnboardingContent.findOneAndUpdate(
-        {},
-        { 
-          ...defaultContent,
-          lastUpdated: new Date(),
-        },
-        { new: true }
-      );
-    }
+    // Force update the content with our default values
+    const content = await OnboardingContent.findOneAndUpdate(
+      {}, // empty filter to match any document
+      defaultContent,
+      { 
+        new: true, // return the updated document
+        upsert: true, // create if doesn't exist
+      }
+    );
 
     res.json(content);
   } catch (error) {
@@ -61,6 +59,10 @@ router.get('/content', auth, async (req, res) => {
 router.post('/content', auth, async (req, res) => {
   try {
     const { pages } = req.body;
+    const userEmail = req.user?.email;
+
+    // Check if user is admin
+    const isAdmin = userEmail === 'JimHeiniger@gmail.com';
 
     // Update or create the content
     const content = await OnboardingContent.findOneAndUpdate(
@@ -80,6 +82,18 @@ router.post('/content', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating onboarding content:', error);
     res.status(500).json({ error: 'Error updating onboarding content' });
+  }
+});
+
+// Add a new endpoint to check if user can bypass validation
+router.get('/can-bypass-validation', auth, async (req, res) => {
+  try {
+    const userEmail = req.user?.email?.toLowerCase();
+    const isAdmin = userEmail === 'jimheiniger@gmail.com' || userEmail === 'jimheiniger@yahoo.com';
+    res.json({ canBypass: isAdmin });
+  } catch (error) {
+    console.error('Error checking bypass status:', error);
+    res.status(500).json({ error: 'Error checking bypass status' });
   }
 });
 

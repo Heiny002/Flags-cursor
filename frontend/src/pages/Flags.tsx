@@ -43,7 +43,7 @@ const Flags: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/hot-takes`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/hot-takes`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
